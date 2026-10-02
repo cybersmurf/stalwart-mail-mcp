@@ -57,16 +57,16 @@ Heslo se ukládá do klíčenky systému.
 
 ### Jakýkoli MCP klient (stdio)
 
-```bash
-npm install && npm run build
-```
+Server je na npm jako [`stalwart-mail-mcp`](https://www.npmjs.com/package/stalwart-mail-mcp)
+a v [registru MCP](https://registry.modelcontextprotocol.io) jako
+`io.github.cybersmurf/stalwart-mail-mcp`, takže není potřeba nic stahovat:
 
 ```json
 {
   "mcpServers": {
     "stalwart-mail": {
-      "command": "node",
-      "args": ["/cesta/k/stalwart-mail-mcp/dist/index.cjs"],
+      "command": "npx",
+      "args": ["-y", "stalwart-mail-mcp"],
       "env": {
         "STALWART_URL": "https://mail.example.com",
         "STALWART_USER": "jana@example.com",
@@ -77,7 +77,7 @@ npm install && npm run build
 }
 ```
 
-Claude Code: `claude mcp add stalwart-mail --env STALWART_URL=https://mail.example.com --env STALWART_USER=jana@example.com --env STALWART_PASSWORD=… -- node /cesta/k/stalwart-mail-mcp/dist/index.cjs`
+Claude Code: `claude mcp add stalwart-mail --env STALWART_URL=https://mail.example.com --env STALWART_USER=jana@example.com --env STALWART_PASSWORD=… -- npx -y stalwart-mail-mcp`
 
 ## Nastavení
 

@@ -57,16 +57,16 @@ Mistral API key for OCR. The password is kept in the operating system's keychain
 
 ### Any MCP client (stdio)
 
-```bash
-npm install && npm run build
-```
+The server is on npm as [`stalwart-mail-mcp`](https://www.npmjs.com/package/stalwart-mail-mcp)
+and in the [MCP Registry](https://registry.modelcontextprotocol.io) as
+`io.github.cybersmurf/stalwart-mail-mcp`, so no checkout is needed:
 
 ```json
 {
   "mcpServers": {
     "stalwart-mail": {
-      "command": "node",
-      "args": ["/path/to/stalwart-mail-mcp/dist/index.cjs"],
+      "command": "npx",
+      "args": ["-y", "stalwart-mail-mcp"],
       "env": {
         "STALWART_URL": "https://mail.example.com",
         "STALWART_USER": "jane@example.com",
@@ -77,7 +77,7 @@ npm install && npm run build
 }
 ```
 
-Claude Code: `claude mcp add stalwart-mail --env STALWART_URL=https://mail.example.com --env STALWART_USER=jane@example.com --env STALWART_PASSWORD=… -- node /path/to/stalwart-mail-mcp/dist/index.cjs`
+Claude Code: `claude mcp add stalwart-mail --env STALWART_URL=https://mail.example.com --env STALWART_USER=jane@example.com --env STALWART_PASSWORD=… -- npx -y stalwart-mail-mcp`
 
 ## Configuration
 
