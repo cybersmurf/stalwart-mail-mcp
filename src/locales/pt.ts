@@ -114,6 +114,8 @@ const pt: Partial<Record<Key, string>> = {
   "err.tooManyFiles": "A pasta {dir} já contém demasiados ficheiros com o nome {name}.",
   "att.defaultName": "anexo-{n}",
   "att.saved": "guardado em `{path}`",
+  "att.notSaved": "não guardado em disco (a gravação de anexos está desligada)",
+  "att.needSaving": "Para obter o ficheiro, liga a gravação de anexos nas definições da extensão.",
   "att.imageDownscaled": "A imagem é uma pré-visualização reduzida; o original está no ficheiro guardado.",
   "att.imageTooBig": "A imagem é demasiado grande para ser incorporada e não foi possível reduzi-la — abre o ficheiro guardado.",
   "att.ocrText": "Texto da imagem (OCR):",

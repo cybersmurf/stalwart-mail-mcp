@@ -7,7 +7,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { listAttachments, pickAttachment, readAttachment, saveToDisk, type Content } from "./attachments.js";
+import pkg from "../package.json";
+import { listAttachments, pickAttachment, readAttachment, storeAttachment, type Content } from "./attachments.js";
 import { config, tool } from "./config.js";
 import { addContact, formatContactsMarkdown, listAddressBooks, searchContacts, searchCorrespondents } from "./contacts.js";
 import { lang, t } from "./i18n.js";
@@ -25,7 +26,7 @@ if (!config.baseUrl || !config.user || !(config.password || config.token)) {
 
 const client = new JmapClient(config.baseUrl, config.user, config.password, config.token);
 
-const server = new McpServer({ name: `${config.prefix}-mcp`, title: config.brand, version: "2.0.0" });
+const server = new McpServer({ name: `${config.prefix}-mcp`, title: config.brand, version: pkg.version });
 
 type ToolResult = { content: Content[]; isError?: boolean };
 const ok = (text: string): ToolResult => ({ content: [{ type: "text", text }] });
@@ -36,6 +37,9 @@ const fail = (e: unknown): ToolResult => ({
 const run = async (fn: () => Promise<string>): Promise<ToolResult> => {
   try { return ok(await fn()); } catch (e) { return fail(e); }
 };
+
+/** `when(flag)?.registerTool(…)` registers a tool only when its capability is switched on (see config.allow). */
+const when = (enabled: boolean) => (enabled ? server : undefined);
 
 const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true };
 
@@ -126,7 +130,7 @@ server.registerTool(
   }),
 );
 
-server.registerTool(
+when(config.allow.attachments)?.registerTool(
   tool("get_attachment"),
   {
     title: t("tool.get_attachment.title"),
@@ -139,10 +143,10 @@ server.registerTool(
       page_to: z.number().int().min(1).optional().describe(t("tool.get_attachment.page_to")),
       preview: z.boolean().default(false).describe(t("tool.get_attachment.preview")),
       ocr: z.boolean().default(true).describe(t("tool.get_attachment.ocr")),
-      save_dir: z.string().optional().describe(t("tool.get_attachment.save_dir", { dir: config.downloadDir })),
+      ...(config.saveAttachments ? { save_dir: z.string().optional().describe(t("tool.get_attachment.save_dir", { dir: config.downloadDir })) } : {}),
     },
-    // writes a file to the local disk, the mailbox itself is untouched
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    // the mailbox is never touched; with saving on, a copy of the file is written to the local disk
+    annotations: { ...READ_ONLY, readOnlyHint: !config.saveAttachments },
   },
   async (p): Promise<ToolResult> => {
     try {
@@ -150,8 +154,12 @@ server.registerTool(
       const { attachments } = await listAttachments(client, acct.id, p.id);
       const a = pickAttachment(attachments, p.attachment);
       const bytes = await client.download(acct.id, a.blobId, a.name, a.type);
-      const saved = await saveToDisk(bytes, a.name, p.save_dir || config.downloadDir);
-      return { content: await readAttachment(a, bytes, saved, { pageFrom: p.page_from, pageTo: p.page_to, preview: p.preview, ocr: p.ocr }) };
+      const file = await storeAttachment(bytes, a.name, (p as { save_dir?: string }).save_dir);
+      try {
+        return { content: await readAttachment(a, bytes, file.path, { pageFrom: p.page_from, pageTo: p.page_to, preview: p.preview, ocr: p.ocr, kept: file.kept }) };
+      } finally {
+        await file.cleanup();
+      }
     } catch (e) {
       return fail(e);
     }
@@ -177,7 +185,7 @@ const composeSchema = {
 
 const WRITES = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true };
 
-server.registerTool(
+when(config.allow.send)?.registerTool(
   tool("send_email"),
   { title: t("tool.send_email.title"), description: t("tool.send_email.desc"), inputSchema: composeSchema, annotations: WRITES },
   async (p) => run(async () => {
@@ -190,7 +198,7 @@ server.registerTool(
   }),
 );
 
-server.registerTool(
+when(config.allow.drafts)?.registerTool(
   tool("create_draft"),
   { title: t("tool.create_draft.title"), description: t("tool.create_draft.desc"), inputSchema: composeSchema, annotations: WRITES },
   async (p) => run(async () => {
@@ -203,7 +211,7 @@ server.registerTool(
   }),
 );
 
-server.registerTool(
+when(config.allow.send)?.registerTool(
   tool("send_draft"),
   {
     title: t("tool.send_draft.title"),
@@ -222,7 +230,7 @@ server.registerTool(
   }),
 );
 
-server.registerTool(
+when(config.allow.drafts)?.registerTool(
   tool("delete_draft"),
   {
     title: t("tool.delete_draft.title"),
@@ -263,7 +271,7 @@ server.registerTool(
   }),
 );
 
-server.registerTool(
+when(config.allow.contactEdit)?.registerTool(
   tool("add_contact"),
   {
     title: t("tool.add_contact.title"),
@@ -298,7 +306,8 @@ server.registerTool(
 
 async function main() {
   await server.connect(new StdioServerTransport());
-  console.error(`${config.brand} MCP: ${config.user} @ ${config.baseUrl} (${lang}, ${config.prefix}_*)`);
+  const off = Object.entries(config.allow).filter(([, on]) => !on).map(([name]) => name);
+  console.error(`${config.brand} MCP ${pkg.version}: ${config.user} @ ${config.baseUrl} (${lang}, ${config.prefix}_*${off.length ? `, off: ${off.join(", ")}` : ""})`);
 }
 
 main().catch((e) => {

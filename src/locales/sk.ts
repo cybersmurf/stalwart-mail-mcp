@@ -114,6 +114,8 @@ const sk: Partial<Record<Key, string>> = {
   "err.tooManyFiles": "V priečinku {dir} je už príliš veľa súborov s názvom {name}.",
   "att.defaultName": "priloha-{n}",
   "att.saved": "uložené do `{path}`",
+  "att.notSaved": "na disk sa neukladá (ukladanie príloh je vypnuté)",
+  "att.needSaving": "Pre samotný súbor zapni ukladanie príloh v nastaveniach rozšírenia.",
   "att.imageDownscaled": "Obrázok je zmenšený náhľad, originál je v uloženom súbore.",
   "att.imageTooBig": "Obrázok je na vloženie príliš veľký a zmenšiť sa ho nepodarilo — otvor uložený súbor.",
   "att.ocrText": "Text z obrázka (OCR):",

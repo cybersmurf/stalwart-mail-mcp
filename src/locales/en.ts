@@ -116,6 +116,8 @@ const en = {
   "err.tooManyFiles": "Folder {dir} already holds too many files named {name}.",
   "att.defaultName": "attachment-{n}",
   "att.saved": "saved to `{path}`",
+  "att.notSaved": "not kept on disk (saving attachments is switched off)",
+  "att.needSaving": "To get the file itself, switch on saving attachments in the extension settings.",
   "att.imageDownscaled": "The image is a downscaled preview; the original is in the saved file.",
   "att.imageTooBig": "The image is too large to inline and could not be downscaled — open the saved file.",
   "att.ocrText": "Text from the image (OCR):",

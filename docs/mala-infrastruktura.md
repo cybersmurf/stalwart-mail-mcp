@@ -85,8 +85,8 @@ Pokud ti proti Stalwartu už běží webmail přes JMAP, cesty jsou hotové a ne
   schránky, a nic v cizích soukromých schránkách.
 - Odeslání je okamžité. Popisy nástrojů modelu ukládají posílat jen na výslovný pokyn
   a jinak uložit koncept; koncepty jsou vidět ve webmailu i v telefonu ke kontrole. Kdo chce
-  tvrdou pojistku místo pokynu, nechá si `mail_send_email` a `mail_send_draft` v klientu
-  schvalovat ručně (Claude Desktop se ptá po nástrojích).
+  tvrdou pojistku místo pokynu, vypne v nastavení rozšíření **Povolit odesílání** — nástroje
+  pro odeslání pak pro model neexistují — nebo si je v klientu nechá schvalovat ručně.
 - Přijatou ani odeslanou poštu smazat neumí; `mail_delete_draft` odmítne cokoli, co není
   koncept.
 - Přílohy se ukládají na notebook (výchozí `~/Downloads/Mail-Attachments`).

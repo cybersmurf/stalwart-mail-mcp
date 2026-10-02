@@ -90,6 +90,27 @@ Claude Code: `claude mcp add stalwart-mail --env STALWART_URL=https://mail.examp
 | `MAIL_TIMEZONE` | časové pásmo (IANA) pro data ve výstupu, výchozí pásmo počítače |
 | `MISTRAL_API_KEY` | zapne OCR skenů a fotek dokumentů (volitelné) |
 | `MISTRAL_OCR_MODEL` | výchozí `mistral-ocr-latest` |
+| `MAIL_ALLOW_SEND` | `false` odebere `send_email` a `send_draft` |
+| `MAIL_ALLOW_DRAFTS` | `false` odebere `create_draft` a `delete_draft` |
+| `MAIL_ALLOW_CONTACT_EDIT` | `false` odebere `add_contact` |
+| `MAIL_ALLOW_ATTACHMENTS` | `false` odebere `get_attachment` |
+| `MAIL_SAVE_ATTACHMENTS` | `false` = otevřené přílohy se jen přečtou, na disk se nic nezapíše |
+
+## Co smí dělat
+
+Každá schopnost je přepínač v nastavení rozšíření (nebo proměnná výše), ve výchozím stavu je
+vše zapnuté. Vypnutá schopnost se **jako nástroj vůbec nenabídne**, takže platí bez ohledu na
+to, co si pamatují schvalovací dotazy klienta:
+
+- vypnuté odesílání → schránka, kterou Claude čte a píše do ní koncepty, ale nikdy z ní neodešle;
+- vypnuté odesílání, koncepty i úpravy kontaktů → schránka jen pro čtení;
+- vypnuté ukládání příloh → `get_attachment` čte soubor z dočasné kopie a je označený jako
+  nástroj jen pro čtení; se zapnutým ukládáním zapisuje do složky stahování a je označený jako
+  zapisující, s čímž klienti mohou při schvalování zacházet jinak.
+
+Samotné schvalování („povolit jednou / povolit vždy“) patří klientovi, ne tomuto serveru.
+V Claude Desktop se nastavuje po nástrojích v nastavení rozšíření; po aktualizaci, která změní
+definici nástroje, se klient může zeptat znovu.
 
 ## Přílohy a OCR
 

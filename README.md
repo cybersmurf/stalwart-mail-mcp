@@ -90,6 +90,27 @@ Claude Code: `claude mcp add stalwart-mail --env STALWART_URL=https://mail.examp
 | `MAIL_TIMEZONE` | IANA zone for dates in the output, default the machine's zone |
 | `MISTRAL_API_KEY` | enables OCR of scans and photographed documents (optional) |
 | `MISTRAL_OCR_MODEL` | default `mistral-ocr-latest` |
+| `MAIL_ALLOW_SEND` | `false` removes `send_email` and `send_draft` |
+| `MAIL_ALLOW_DRAFTS` | `false` removes `create_draft` and `delete_draft` |
+| `MAIL_ALLOW_CONTACT_EDIT` | `false` removes `add_contact` |
+| `MAIL_ALLOW_ATTACHMENTS` | `false` removes `get_attachment` |
+| `MAIL_SAVE_ATTACHMENTS` | `false` = opened attachments are only read, nothing is written to disk |
+
+## What it is allowed to do
+
+Every capability is a switch in the extension settings (or an env variable above), all on by
+default. A capability that is off is **not offered as a tool at all**, so it holds regardless
+of what the client's approval prompts remember:
+
+- sending off → a mailbox Claude can read and draft in, but never send from;
+- sending, drafts and contact edits off → a read-only mailbox;
+- saving attachments off → `get_attachment` reads the file from a temporary copy and is
+  annotated read-only; with saving on it writes to the download folder and is annotated as a
+  writing tool, which clients may treat differently when asking for approval.
+
+Approvals themselves ("allow once / always allow") belong to the client, not to this server.
+In Claude Desktop they are set per tool in the extension's settings; a client may ask again
+after an update that changes a tool's definition.
 
 ## Attachments and OCR
 

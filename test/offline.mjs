@@ -72,7 +72,7 @@ await new Promise((r) => mock.listen(0, "127.0.0.1", r));
 const saveDir = await fs.mkdtemp(path.join(os.tmpdir(), "stalwart-mail-test-"));
 const mockUrl = `http://127.0.0.1:${mock.address().port}`;
 async function connect(extraEnv) {
-  const env = { ...process.env, STALWART_URL: mockUrl, STALWART_USER: "petr@example.com", STALWART_PASSWORD: "x", STALWART_TOKEN: "", MAIL_DOWNLOAD_DIR: saveDir, MAIL_LANG: "cs", MAIL_TOOL_PREFIX: "", ...extraEnv };
+  const env = { ...process.env, MAIL_ALLOW_SEND: "", MAIL_ALLOW_DRAFTS: "", MAIL_ALLOW_CONTACT_EDIT: "", MAIL_ALLOW_ATTACHMENTS: "", MAIL_SAVE_ATTACHMENTS: "", STALWART_URL: mockUrl, STALWART_USER: "petr@example.com", STALWART_PASSWORD: "x", STALWART_TOKEN: "", MAIL_DOWNLOAD_DIR: saveDir, MAIL_LANG: "cs", MAIL_TOOL_PREFIX: "", ...extraEnv };
   for (const k of Object.keys(env)) if (env[k] === undefined) delete env[k];
   const c = new Client({ name: "attachments-test", version: "0" });
   await c.connect(new StdioClientTransport({ command: "node", args: ["dist/index.cjs"], stderr: "pipe", env }));
@@ -87,6 +87,46 @@ const noOcr = await connect({ MAIL_OCR_URL: `${mockUrl}/ocr`, MISTRAL_API_KEY: "
 const call = (args, c = client) => c.callTool({ name: "mail_get_attachment", arguments: { id: "m1", ...args } });
 const texts = (r) => r.content.filter((c) => c.type === "text").map((c) => c.text).join("\n");
 const images = (r) => r.content.filter((c) => c.type === "image");
+
+// ---- capability switches: what is off is not offered as a tool ----
+async function capabilities() {
+  const toolNames = async (c) => (await c.listTools()).tools.map((x) => x.name.replace(/^mail_/, "")).sort();
+  const att = async (c) => (await c.listTools()).tools.find((x) => x.name === "mail_get_attachment");
+
+  // default: everything on, attachments are kept on disk → the tool is not read-only
+  assert.equal((await att(client)).annotations.readOnlyHint, false);
+  assert.ok("save_dir" in (await att(client)).inputSchema.properties);
+
+  // read-only mailbox: no sending, no drafts, no contact edits, nothing written to disk
+  const emptyDir = path.join(saveDir, "must-stay-empty");
+  const ro = await connect({ MAIL_ALLOW_SEND: "false", MAIL_ALLOW_DRAFTS: "0", MAIL_ALLOW_CONTACT_EDIT: "off", MAIL_SAVE_ATTACHMENTS: "false", MAIL_DOWNLOAD_DIR: emptyDir });
+  try {
+    assert.deepEqual(await toolNames(ro), ["get_attachment", "get_email", "list_mailboxes", "search_contacts", "search_emails"]);
+    const tool = await att(ro);
+    assert.equal(tool.annotations.readOnlyHint, true);
+    assert.ok(!("save_dir" in tool.inputSchema.properties));
+    const r = await call({ attachment: "penb.pdf" }, ro);
+    assert.match(texts(r), /Třída energetické náročnosti: G/);
+    assert.match(texts(r), /na disk se neukládá/);
+    assert.doesNotMatch(texts(r), /uloženo do/);
+    await assert.rejects(fs.access(emptyDir), "nothing may be written to the download folder");
+    // a type that cannot be shown inline points at the setting instead of a file that does not exist
+    const send = await ro.callTool({ name: "mail_send_email", arguments: { to: ["a@example.com"], text: "x" } }).catch((e) => ({ isError: true, content: [{ type: "text", text: String(e) }] }));
+    assert.ok(send.isError, "a switched-off tool cannot be called");
+  } finally {
+    await ro.close();
+  }
+
+  // attachments off; an unfilled setting (unreplaced template) keeps the default
+  const noAtt = await connect({ MAIL_ALLOW_ATTACHMENTS: "false", MAIL_ALLOW_SEND: "${user_config.allow_send}" });
+  try {
+    const names = await toolNames(noAtt);
+    assert.ok(!names.includes("get_attachment") && names.includes("send_email"));
+  } finally {
+    await noAtt.close();
+  }
+  console.log("capability switches (send, drafts, contacts, attachments, saving): OK");
+}
 
 // ---- language, tool prefix, auth ----
 async function languagesAndBranding() {
@@ -246,6 +286,7 @@ try {
     }
   }
 
+  await capabilities();
   await languagesAndBranding();
   await localesAreConsistent();
 

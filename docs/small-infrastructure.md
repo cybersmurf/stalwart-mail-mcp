@@ -85,8 +85,9 @@ there and there is nothing to change.
   password allows, and nothing on other people's private mailboxes.
 - Sending is immediate. The tool descriptions instruct the model to send only when the user
   explicitly asks and to save a draft otherwise; drafts show up in webmail and on the phone
-  for review. If you want a hard guarantee rather than an instruction, approve `mail_send_email`
-  and `mail_send_draft` manually in the client (Claude Desktop asks per tool).
+  for review. If you want a hard guarantee rather than an instruction, switch **Allow sending** off
+  in the extension settings — the send tools then do not exist for the model — or keep them
+  on manual approval in the client.
 - It cannot delete received or sent mail; `mail_delete_draft` refuses anything that is not a
   draft.
 - Attachments are written to the laptop (`~/Downloads/Mail-Attachments` by default).

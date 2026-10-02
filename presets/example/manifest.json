@@ -25,7 +25,12 @@
         "MISTRAL_API_KEY": "${user_config.mistral_api_key}",
         "MAIL_TOOL_PREFIX": "acme",
         "MAIL_BRAND": "Acme Mail",
-        "MAIL_DOWNLOAD_DIR": "~/Downloads/Acme-Mail"
+        "MAIL_DOWNLOAD_DIR": "~/Downloads/Acme-Mail",
+        "MAIL_ALLOW_SEND": "${user_config.allow_send}",
+        "MAIL_ALLOW_DRAFTS": "${user_config.allow_drafts}",
+        "MAIL_ALLOW_CONTACT_EDIT": "${user_config.allow_contact_edit}",
+        "MAIL_ALLOW_ATTACHMENTS": "${user_config.allow_attachments}",
+        "MAIL_SAVE_ATTACHMENTS": "${user_config.save_attachments}"
       }
     }
   },
@@ -123,6 +128,41 @@
       "title": "Server address",
       "description": "Leave the default unless you know why to change it.",
       "default": "https://mail.example.com",
+      "required": false
+    },
+    "allow_send": {
+      "type": "boolean",
+      "title": "Allow sending",
+      "description": "Off = Claude cannot send mail at all (the send tools are not offered); it can still prepare drafts.",
+      "default": true,
+      "required": false
+    },
+    "allow_drafts": {
+      "type": "boolean",
+      "title": "Allow drafts",
+      "description": "Off = Claude cannot create or delete drafts.",
+      "default": true,
+      "required": false
+    },
+    "allow_contact_edit": {
+      "type": "boolean",
+      "title": "Allow adding contacts",
+      "description": "Off = Claude can look contacts up but not add them.",
+      "default": true,
+      "required": false
+    },
+    "allow_attachments": {
+      "type": "boolean",
+      "title": "Allow opening attachments",
+      "description": "Off = Claude sees attachment names only and cannot read their content.",
+      "default": true,
+      "required": false
+    },
+    "save_attachments": {
+      "type": "boolean",
+      "title": "Keep opened attachments on disk",
+      "description": "On = every attachment Claude opens is also saved to the download folder. Off = it is only read and nothing is written to disk, which makes the attachment tool read-only.",
+      "default": true,
       "required": false
     }
   }

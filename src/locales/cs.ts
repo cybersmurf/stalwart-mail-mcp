@@ -107,6 +107,8 @@ const cs: Record<Key, string> = {
   "err.tooManyFiles": "Ve složce {dir} je už příliš mnoho souborů s názvem {name}.",
   "att.defaultName": "priloha-{n}",
   "att.saved": "uloženo do `{path}`",
+  "att.notSaved": "na disk se neukládá (ukládání příloh je vypnuté)",
+  "att.needSaving": "Pro samotný soubor zapni ukládání příloh v nastavení rozšíření.",
   "att.imageDownscaled": "Obrázek je zmenšený náhled, originál je v uloženém souboru.",
   "att.imageTooBig": "Obrázek je na vložení moc velký a zmenšit se ho nepodařilo — otevři uložený soubor.",
   "att.ocrText": "Text z obrázku (OCR):",

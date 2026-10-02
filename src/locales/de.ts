@@ -114,6 +114,8 @@ const de: Partial<Record<Key, string>> = {
   "err.tooManyFiles": "Im Ordner {dir} gibt es bereits zu viele Dateien mit dem Namen {name}.",
   "att.defaultName": "anhang-{n}",
   "att.saved": "gespeichert unter `{path}`",
+  "att.notSaved": "nicht auf der Festplatte gespeichert (Speichern von Anhängen ist ausgeschaltet)",
+  "att.needSaving": "Für die Datei selbst schalte das Speichern von Anhängen in den Einstellungen der Erweiterung ein.",
   "att.imageDownscaled": "Das Bild ist eine verkleinerte Vorschau; das Original befindet sich in der gespeicherten Datei.",
   "att.imageTooBig": "Das Bild ist zu groß zum Einbetten und konnte nicht verkleinert werden — öffne die gespeicherte Datei.",
   "att.ocrText": "Text aus dem Bild (OCR):",

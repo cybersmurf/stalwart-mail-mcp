@@ -114,6 +114,8 @@ const nl: Partial<Record<Key, string>> = {
   "err.tooManyFiles": "Map {dir} bevat al te veel bestanden met de naam {name}.",
   "att.defaultName": "bijlage-{n}",
   "att.saved": "opgeslagen in `{path}`",
+  "att.notSaved": "niet op schijf bewaard (bijlagen opslaan staat uit)",
+  "att.needSaving": "Zet voor het bestand zelf het opslaan van bijlagen aan in de instellingen van de extensie.",
   "att.imageDownscaled": "De afbeelding is een verkleind voorbeeld; het origineel staat in het opgeslagen bestand.",
   "att.imageTooBig": "De afbeelding is te groot om in te sluiten en kon niet worden verkleind — open het opgeslagen bestand.",
   "att.ocrText": "Tekst uit de afbeelding (OCR):",

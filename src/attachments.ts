@@ -11,7 +11,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { extractText, getDocumentProxy } from "unpdf";
 import { config } from "./config.js";
-import { t } from "./i18n.js";
+import { t, type Key } from "./i18n.js";
 import { JmapClient, JmapError, USING } from "./jmap.js";
 import { mistralOcr, ocrAvailable, OCR_MAX_BYTES } from "./ocr.js";
 import { htmlToText, mimeFromPath, sizeHuman, truncate } from "./util.js";
@@ -65,7 +65,14 @@ export async function listAttachments(c: JmapClient, accountId: string, emailId:
   return { subject: e.subject ?? "", attachments };
 }
 
-export const defaultSaveDir = (): string => config.downloadDir;
+/** Where the attachment lands: the download folder, or a temp folder the caller removes afterwards. */
+export async function storeAttachment(bytes: Uint8Array, name: string, saveDir?: string): Promise<{ path: string; kept: boolean; cleanup: () => Promise<void> }> {
+  if (config.saveAttachments) {
+    return { path: await saveToDisk(bytes, name, saveDir || config.downloadDir), kept: true, cleanup: async () => {} };
+  }
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "stalwart-mail-att-"));
+  return { path: await saveToDisk(bytes, name, tmp), kept: false, cleanup: () => fs.rm(tmp, { recursive: true, force: true }) };
+}
 
 /** Saves the file; the same name with different content gets a " (2)" suffix, identical content is not rewritten. */
 export async function saveToDisk(bytes: Uint8Array, name: string, dir: string): Promise<string> {
@@ -146,11 +153,14 @@ async function ocrImage(a: AttachmentInfo, bytes: Uint8Array, savedPath: string)
 
 const image = (bytes: Uint8Array, mimeType: string): Content => ({ type: "image", data: Buffer.from(bytes).toString("base64"), mimeType });
 
-export interface ReadOptions { pageFrom?: number; pageTo?: number; preview?: boolean; ocr?: boolean }
+export interface ReadOptions { pageFrom?: number; pageTo?: number; preview?: boolean; ocr?: boolean; /** false = savedPath is a temp file that will be removed */ kept?: boolean }
 
 /** The attachment's content for the model: a header plus text / image depending on the file type. */
 export async function readAttachment(a: AttachmentInfo, bytes: Uint8Array, savedPath: string, opts: ReadOptions = {}): Promise<Content[]> {
-  const head = `**${a.name}** (${a.type}, ${sizeHuman(bytes.length)}) — ${t("att.saved", { path: savedPath })}`;
+  const kept = opts.kept !== false;
+  const head = `**${a.name}** (${a.type}, ${sizeHuman(bytes.length)}) — ${kept ? t("att.saved", { path: savedPath }) : t("att.notSaved")}`;
+  // messages that send the reader to the saved file make no sense when nothing is kept
+  const tail = (key: Key) => (kept ? t(key) : t("att.needSaving"));
   const kind = kindOf(a, bytes);
   const useOcr = opts.ocr !== false && ocrAvailable();
 
@@ -170,8 +180,8 @@ export async function readAttachment(a: AttachmentInfo, bytes: Uint8Array, saved
     }
     const jpeg = await renderJpeg(savedPath);
     return jpeg
-      ? [{ type: "text", text: `${head}\n\n${t("att.imageDownscaled")}${ocrPart}` }, image(jpeg, "image/jpeg")]
-      : [{ type: "text", text: `${head}\n\n${t("att.imageTooBig")}${ocrPart}` }];
+      ? [{ type: "text", text: `${head}${kept ? `\n\n${t("att.imageDownscaled")}` : ""}${ocrPart}` }, image(jpeg, "image/jpeg")]
+      : [{ type: "text", text: `${head}\n\n${tail("att.imageTooBig")}${ocrPart}` }];
   }
 
   if (kind === "pdf") {
@@ -215,7 +225,7 @@ export async function readAttachment(a: AttachmentInfo, bytes: Uint8Array, saved
     if (unread.length === to - from + 1) {
       // nothing could be read: at least an image of page 1
       const jpeg = await renderJpeg(savedPath);
-      out.push({ type: "text", text: `${head}\n\n${t("att.scan", { total })} ${ocrNote} ${t(jpeg ? "att.scanImage" : "att.scanNoImage")}` });
+      out.push({ type: "text", text: `${head}\n\n${t("att.scan", { total })} ${ocrNote} ${jpeg && !kept ? t("att.firstPageAttached") : tail(jpeg ? "att.scanImage" : "att.scanNoImage")}` });
       if (jpeg) out.push(image(jpeg, "image/jpeg"));
       return out;
     }
@@ -229,5 +239,5 @@ export async function readAttachment(a: AttachmentInfo, bytes: Uint8Array, saved
     return out;
   }
 
-  return [{ type: "text", text: `${head}\n\n${t("att.unsupported")}` }];
+  return [{ type: "text", text: `${head}\n\n${tail("att.unsupported")}` }];
 }

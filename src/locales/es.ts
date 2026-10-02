@@ -114,6 +114,8 @@ const es: Partial<Record<Key, string>> = {
   "err.tooManyFiles": "La carpeta {dir} ya contiene demasiados archivos llamados {name}.",
   "att.defaultName": "adjunto-{n}",
   "att.saved": "guardado en `{path}`",
+  "att.notSaved": "no se guarda en disco (el guardado de adjuntos está desactivado)",
+  "att.needSaving": "Para obtener el archivo, activa el guardado de adjuntos en los ajustes de la extensión.",
   "att.imageDownscaled": "La imagen es una vista previa reducida; el original está en el archivo guardado.",
   "att.imageTooBig": "La imagen es demasiado grande para incluirla y no se pudo reducir — abre el archivo guardado.",
   "att.ocrText": "Texto de la imagen (OCR):",

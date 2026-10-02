@@ -114,6 +114,8 @@ const it: Partial<Record<Key, string>> = {
   "err.tooManyFiles": "La cartella {dir} contiene già troppi file di nome {name}.",
   "att.defaultName": "allegato-{n}",
   "att.saved": "salvato in `{path}`",
+  "att.notSaved": "non salvato su disco (il salvataggio degli allegati è disattivato)",
+  "att.needSaving": "Per avere il file, attiva il salvataggio degli allegati nelle impostazioni dell'estensione.",
   "att.imageDownscaled": "L'immagine è un'anteprima ridotta; l'originale è nel file salvato.",
   "att.imageTooBig": "L'immagine è troppo grande per essere inclusa e non è stato possibile ridurla — apri il file salvato.",
   "att.ocrText": "Testo dell'immagine (OCR):",

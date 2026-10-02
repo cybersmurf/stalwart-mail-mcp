@@ -114,6 +114,8 @@ const pl: Partial<Record<Key, string>> = {
   "err.tooManyFiles": "W folderze {dir} jest już zbyt wiele plików o nazwie {name}.",
   "att.defaultName": "zalacznik-{n}",
   "att.saved": "zapisano w `{path}`",
+  "att.notSaved": "nie zapisano na dysku (zapisywanie załączników jest wyłączone)",
+  "att.needSaving": "Aby otrzymać sam plik, włącz zapisywanie załączników w ustawieniach rozszerzenia.",
   "att.imageDownscaled": "Obraz jest pomniejszonym podglądem; oryginał znajduje się w zapisanym pliku.",
   "att.imageTooBig": "Obraz jest zbyt duży, aby go osadzić, i nie udało się go pomniejszyć — otwórz zapisany plik.",
   "att.ocrText": "Tekst z obrazu (OCR):",

@@ -114,6 +114,8 @@ const fr: Partial<Record<Key, string>> = {
   "err.tooManyFiles": "Le dossier {dir} contient déjà trop de fichiers nommés {name}.",
   "att.defaultName": "piece-jointe-{n}",
   "att.saved": "enregistré dans `{path}`",
+  "att.notSaved": "non conservé sur le disque (l'enregistrement des pièces jointes est désactivé)",
+  "att.needSaving": "Pour obtenir le fichier lui-même, active l'enregistrement des pièces jointes dans les réglages de l'extension.",
   "att.imageDownscaled": "L'image est un aperçu réduit ; l'original se trouve dans le fichier enregistré.",
   "att.imageTooBig": "L'image est trop grande pour être intégrée et n'a pas pu être réduite — ouvre le fichier enregistré.",
   "att.ocrText": "Texte de l'image (OCR) :",
