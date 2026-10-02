@@ -52,11 +52,27 @@ Guide: <https://modelcontextprotocol.io/registry/quickstart>
 ## 4. Claude directory (optional, reviewed by Anthropic)
 
 The directory no longer lists local servers packaged as desktop extensions (`.mcpb`). A local
-MCP server gets there inside a **plugin bundle**: a public GitHub repository folder with a
-plugin manifest that references the server (for example through `npx -y stalwart-mail-mcp`),
-submitted from a paid Claude account at <https://claude.ai/directory/manage>. Every version is
-validated and scanned and a person reviews a new listing. This repository does not contain a
-plugin bundle yet. Start at <https://claude.com/docs/directory/publish>.
+MCP server gets there inside a **plugin bundle**, and that has a consequence worth knowing
+before spending time on it: per Anthropic's platform table, a local server in a plugin runs in
+**Claude Code** and in **Cowork sessions on your own computer**, and is **ignored in chat**
+(claude.ai, desktop and mobile). Cowork also does not ask for settings, so a server that needs
+a password only really works in Claude Code. People who want mail in Claude Desktop chat keep
+using the `.mcpb` from the GitHub release.
+
+The bundle is in [`plugin/`](../plugin): `.claude-plugin/plugin.json` (settings as
+`userConfig`, secrets marked `sensitive`), `.mcp.json` (starts `npx -y stalwart-mail-mcp@<exact
+version>`), a README that says what it runs and where data goes, and the license.
+
+1. npm publish first (step 2) — the bundle starts the package from npm.
+2. Keep the version in `plugin/.mcp.json` and `plugin/.claude-plugin/plugin.json` equal to
+   the published one (`claude plugin validate ./plugin` checks the files are well-formed).
+3. From a paid Claude account open <https://claude.ai/directory/manage> → **Submit new** →
+   **Plugin bundle** → repository `cybersmurf/stalwart-mail-mcp`, folder `plugin` → **Validate**.
+4. Expect holds for a reviewer rather than an instant listing: a pinned `npx` package is
+   always reviewed by a person, and the name contains "Stalwart", a brand that is not ours —
+   say in the submission that this is an independent client for Stalwart servers.
+
+Checklist: <https://claude.com/docs/plugins/pre-submission-checklist>
 
 ## 5. Tell people who run Stalwart
 
@@ -65,6 +81,6 @@ release and to `docs/small-infrastructure.md` reaches exactly the audience this 
 
 ## Releasing an update
 
-Bump the version in `package.json` and `server.json` → `npm run test:offline` → commit and tag →
+Bump the version in `package.json`, `server.json`, `plugin/.claude-plugin/plugin.json` and `plugin/.mcp.json` → `npm run test:offline` → commit and tag →
 `./pack.sh` and `gh release create` → `npm publish` → `mcp-publisher publish`. Branded presets
 are rebuilt with `./pack.sh --preset <dir>` from their own repositories.

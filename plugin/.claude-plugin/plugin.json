@@ -1,0 +1,75 @@
+{
+  "name": "stalwart-mail",
+  "displayName": "Stalwart Mail",
+  "version": "2.2.0",
+  "description": "Mail and contacts on your own Stalwart server: search, read (attachments and scans too), reply, send, drafts.",
+  "author": {
+    "name": "Petr Šrámek",
+    "url": "https://github.com/cybersmurf"
+  },
+  "homepage": "https://github.com/cybersmurf/stalwart-mail-mcp",
+  "repository": "https://github.com/cybersmurf/stalwart-mail-mcp",
+  "license": "MIT",
+  "keywords": [
+    "email",
+    "jmap",
+    "stalwart",
+    "contacts",
+    "ocr"
+  ],
+  "userConfig": {
+    "server_url": {
+      "type": "string",
+      "title": "Server address",
+      "description": "Public address of your Stalwart server, e.g. https://mail.example.com"
+    },
+    "email": {
+      "type": "string",
+      "title": "Mailbox e-mail",
+      "description": "The full address you sign in with"
+    },
+    "password": {
+      "type": "string",
+      "title": "Mailbox password",
+      "description": "The mailbox password or an app password",
+      "sensitive": true
+    },
+    "language": {
+      "type": "string",
+      "title": "Language",
+      "description": "auto, en, cs, de, es, fr, it, nl, pl, pt or sk",
+      "default": "auto"
+    },
+    "allow_send": {
+      "type": "string",
+      "title": "Allow sending",
+      "description": "true or false. With false Claude can prepare drafts but cannot send mail.",
+      "default": "true"
+    },
+    "ocr_provider": {
+      "type": "string",
+      "title": "OCR provider",
+      "description": "Who reads scanned attachments: off, mistral, anthropic, openai, openrouter, gemini, ollama, lmstudio or custom",
+      "default": "off"
+    },
+    "ocr_api_key": {
+      "type": "string",
+      "title": "OCR API key",
+      "description": "API key of the OCR provider; not needed for local servers",
+      "sensitive": true,
+      "default": ""
+    },
+    "ocr_model": {
+      "type": "string",
+      "title": "OCR model",
+      "description": "Model name; empty = the provider's default where there is one",
+      "default": ""
+    },
+    "ocr_base_url": {
+      "type": "string",
+      "title": "OCR server address",
+      "description": "Only for a custom or non-default OCR server",
+      "default": ""
+    }
+  }
+}

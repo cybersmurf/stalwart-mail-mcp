@@ -42,6 +42,10 @@ on the user's explicit instruction and to create a draft otherwise.
 
 ### Claude Desktop (extension)
 
+Download `stalwart-mail.mcpb` from the
+[latest release](https://github.com/cybersmurf/stalwart-mail-mcp/releases/latest) and open it —
+Claude Desktop offers to install it. Or build it yourself:
+
 ```bash
 npm install
 ./pack.sh                  # → stalwart-mail.mcpb

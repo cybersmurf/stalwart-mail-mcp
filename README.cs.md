@@ -42,6 +42,10 @@ na výslovný pokyn uživatele a jinak založit koncept.
 
 ### Claude Desktop (rozšíření)
 
+Stáhni `stalwart-mail.mcpb` z
+[posledního vydání](https://github.com/cybersmurf/stalwart-mail-mcp/releases/latest) a otevři
+ho — Claude Desktop nabídne instalaci. Nebo si ho sestav:
+
 ```bash
 npm install
 ./pack.sh                  # → stalwart-mail.mcpb
