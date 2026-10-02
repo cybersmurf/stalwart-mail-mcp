@@ -72,12 +72,14 @@ const mock = http.createServer(async (req, res) => {
   if (req.url === "/.well-known/oauth-authorization-server") return json({ issuer: base, token_endpoint: `${base}/auth/token` });
   if (req.url === "/.well-known/jmap") {
     // like Stalwart: a rejected token is 401, no credentials at all is an anonymous session without accounts
-    if (req.headers.authorization === "Bearer bad-token") { res.writeHead(401); return res.end(); }
+    if (/^Bearer (bad-token|junk-)/.test(req.headers.authorization ?? "")) { res.writeHead(401); return res.end(); }
     if (req.headers.authorization === "Bearer anonymous") return json({ apiUrl: `${base}/jmap`, accounts: {}, primaryAccounts: {} });
+    // the remote-mode test runs with an internal address: the session then names the public origin, as Stalwart does
+    const origin = req.headers.authorization === "Bearer good-token" ? "https://mail.internal-test.invalid" : base;
     return json({
       username: "petr@example.com",
-      apiUrl: `${base}/jmap`, uploadUrl: `${base}/upload/{accountId}`,
-      downloadUrl: `${base}/download/{accountId}/{blobId}/{name}?accept={type}`,
+      apiUrl: `${origin}/jmap`, uploadUrl: `${origin}/upload/{accountId}`,
+      downloadUrl: `${origin}/download/{accountId}/{blobId}/{name}?accept={type}`,
       accounts: { acc: { name: "petr@example.com", isPersonal: true, accountCapabilities: { "urn:ietf:params:jmap:mail": {} } } },
       primaryAccounts: { "urn:ietf:params:jmap:mail": "acc" },
     });
@@ -132,7 +134,8 @@ async function remoteMode() {
   const port = await new Promise((resolve) => { const s = net.createServer(); s.listen(0, "127.0.0.1", () => { const p = s.address().port; s.close(() => resolve(p)); }); });
   const child = spawn("node", ["dist/index.cjs", "--http"], {
     stdio: ["ignore", "ignore", "pipe"],
-    env: { PATH: process.env.PATH, HOME: process.env.HOME, STALWART_URL: mockUrl, MCP_PUBLIC_URL: "https://mail.example.com", MCP_HTTP_PORT: String(port), MCP_HTTP_HOST: "127.0.0.1", MAIL_LANG: "en", MAIL_DOWNLOAD_DIR: path.join(saveDir, "remote-must-stay-empty") },
+    // the public name does not resolve here: everything must go through the internal address
+    env: { PATH: process.env.PATH, HOME: process.env.HOME, STALWART_URL: "https://mail.internal-test.invalid", STALWART_INTERNAL_URL: mockUrl, MAIL_AUTH_SERVER: mockUrl, MCP_PUBLIC_URL: "https://mail.example.com", MCP_HTTP_PORT: String(port), MCP_HTTP_HOST: "127.0.0.1", MAIL_LANG: "en", MAIL_DOWNLOAD_DIR: path.join(saveDir, "remote-must-stay-empty") },
   });
   let log = ""; child.stderr.on("data", (d) => (log += d));
   const base = `http://127.0.0.1:${port}`;
@@ -186,7 +189,12 @@ async function remoteMode() {
       assert.match(out, /not kept on disk/);
       await assert.rejects(fs.access(path.join(saveDir, "remote-must-stay-empty")));
     } finally { await c.close(); }
-    console.log("remote mode (metadata, 401 challenges, token pass-through, no local files): OK");
+    // an address that keeps sending rejected tokens is told to slow down
+    let last = 0;
+    for (let i = 0; i < 40 && last !== 429; i++) last = (await post({ Authorization: `Bearer junk-${i}`, "X-Forwarded-For": "203.0.113.9" })).status;
+    assert.equal(last, 429);
+    assert.equal((await post({ Authorization: "Bearer junk-x", "X-Forwarded-For": "203.0.113.10" })).status, 401, "other addresses are unaffected");
+    console.log("remote mode (metadata, 401 challenges, token pass-through, no local files, rate limit): OK");
   } finally {
     child.kill();
   }

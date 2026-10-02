@@ -83,6 +83,12 @@ const prefix = env("MAIL_TOOL_PREFIX").toLowerCase().replace(/[^a-z0-9_]/g, "") 
 export const config = {
   /** Public base URL of the Stalwart server, e.g. https://mail.example.com */
   baseUrl: env("STALWART_URL").replace(/\/+$/, ""),
+  /**
+   * Optional address to reach Stalwart at directly (e.g. http://stalwart:8080 on a Docker
+   * network) when the server runs beside it. Requests then skip the public route; the URLs
+   * Stalwart puts in its JMAP session are redirected to this address as well.
+   */
+  internalUrl: env("STALWART_INTERNAL_URL").replace(/\/+$/, ""),
   user: env("STALWART_USER"),
   password: env("STALWART_PASSWORD"),
   /** OAuth access token; when set it is sent as Bearer instead of Basic auth. */

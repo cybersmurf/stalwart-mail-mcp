@@ -41,6 +41,7 @@ nebo `npx -y stalwart-mail-mcp --http` se stejnými proměnnými, případně
 |---|---|
 | `STALWART_URL` | tvůj Stalwart (povinné) |
 | `MCP_PUBLIC_URL` | veřejná adresa, pod kterou je tento server dostupný, např. `https://mail.example.com` (povinné) |
+| `STALWART_INTERNAL_URL` | volitelná přímá adresa Stalwartu ve vnitřní síti, např. `http://stalwart:8080` — volání JMAP pak nejdou přes veřejnou cestu |
 | `MAIL_AUTH_SERVER` | kde se lidé přihlašují, když se liší od `STALWART_URL` |
 | `MCP_HTTP_PORT`, `MCP_HTTP_HOST`, `MCP_HTTP_PATH` | výchozí `8787`, `0.0.0.0`, `/mcp` |
 | `MAIL_LANG`, `MAIL_TOOL_PREFIX`, `MAIL_ALLOW_*`, `MAIL_OCR_*` | jako v lokálním režimu — tady platí pro všechny uživatele serveru |
@@ -120,6 +121,11 @@ Každý se připojuje svou schránkou; sdílené schránky, ke kterým má pří
   nastavení Stalwartu; přístup zrušíš ve Stalwartu (autorizované aplikace uživatele, nebo
   změnou klienta) a konektor přestane fungovat.
 - Na tvůj server volají servery Anthropicu; reverzní proxy vidí jejich adresy, ne adresu
-  uživatele. Limity a bany pro tuhle cestu proto navazuj na token, ne na IP.
+  uživatele. Server sám odpoví 429 adrese, která za deset minut poslala víc než 30 odmítnutých
+  tokenů, a na odmítnutý token se Stalwartu minutu znovu neptá.
+- **Automatické bany Stalwartu:** každý vypršelý token znamená jedno neúspěšné přihlášení
+  u Stalwartu, započítané adrese, kterou Stalwart vidí — se `STALWART_INTERNAL_URL` je to
+  tento kontejner. Dej kontejneru pevnou adresu a přidej ji ve Stalwartu mezi povolené, jinak
+  jednoho dne dávka vypršelých tokenů zabanuje konektor všem.
 - Provozuj jen za TLS. Kontejner mluví čistým HTTP a má poslouchat na localhostu nebo ve
   vnitřní síti.

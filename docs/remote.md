@@ -41,6 +41,7 @@ or `npx -y stalwart-mail-mcp --http` with the same variables, or
 |---|---|
 | `STALWART_URL` | your Stalwart server (required) |
 | `MCP_PUBLIC_URL` | the public origin this server is reached under, e.g. `https://mail.example.com` (required) |
+| `STALWART_INTERNAL_URL` | optional direct address of Stalwart on the internal network, e.g. `http://stalwart:8080` — JMAP calls then skip the public route |
 | `MAIL_AUTH_SERVER` | where people sign in, when it differs from `STALWART_URL` |
 | `MCP_HTTP_PORT`, `MCP_HTTP_HOST`, `MCP_HTTP_PATH` | default `8787`, `0.0.0.0`, `/mcp` |
 | `MAIL_LANG`, `MAIL_TOOL_PREFIX`, `MAIL_ALLOW_*`, `MAIL_OCR_*` | as in local mode — here they apply to everyone using the server |
@@ -123,6 +124,11 @@ through the `account` parameter, exactly as in local mode.
   expires on Stalwart's schedule; revoke access in Stalwart (the user's authorized apps, or
   by changing the client) and the connector stops working.
 - Anthropic's servers call your server; your reverse proxy sees their addresses, not the
-  user's. Keep rate limits and bans keyed on the token, not the IP, for this route.
+  user's. The server itself answers 429 to an address that sent more than 30 rejected tokens
+  in ten minutes and does not re-ask Stalwart about a rejected token for a minute.
+- **Stalwart's automatic bans:** every expired token costs one failed sign-in at Stalwart,
+  counted against the address Stalwart sees — with `STALWART_INTERNAL_URL` that is this
+  container. Give the container a fixed address and put it on Stalwart's allow list, or one
+  day a burst of expired tokens bans the connector for everybody.
 - Run it behind TLS only. The container speaks plain HTTP and is meant to listen on localhost
   or an internal network.

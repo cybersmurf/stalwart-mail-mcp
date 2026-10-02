@@ -2,6 +2,7 @@
  * Minimal JMAP client for Stalwart (RFC 8620/8621/9610), Basic auth with the mailbox password
  * or Bearer with an OAuth token. The session is fetched once and kept in memory.
  */
+import { config } from "./config.js";
 import { t } from "./i18n.js";
 
 export interface JmapAccount {
@@ -35,6 +36,12 @@ export const USING = {
   submission: "urn:ietf:params:jmap:submission",
   contacts: "urn:ietf:params:jmap:contacts",
 };
+
+/** With STALWART_INTERNAL_URL set, a URL on the public Stalwart origin is sent to the internal address instead. */
+function direct(url: string): string {
+  if (!config.internalUrl || !config.baseUrl) return url;
+  return url.startsWith(config.baseUrl) ? config.internalUrl + url.slice(config.baseUrl.length) : url;
+}
 
 export class JmapClient {
   private session: JmapSession | null = null;
@@ -78,8 +85,9 @@ export class JmapClient {
 
   async getSession(): Promise<JmapSession> {
     if (this.session) return this.session;
-    const res = await this.http(`${this.baseUrl}/.well-known/jmap`, { method: "GET" });
+    const res = await this.http(`${direct(this.baseUrl)}/.well-known/jmap`, { method: "GET" });
     const s = (await res.json()) as any;
+    for (const key of ["apiUrl", "uploadUrl", "downloadUrl"]) if (typeof s[key] === "string") s[key] = direct(s[key]);
     const accounts: JmapAccount[] = Object.entries(s.accounts ?? {}).map(([id, a]: [string, any]) => ({
       id,
       name: a.name,

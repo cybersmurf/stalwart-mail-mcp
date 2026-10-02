@@ -22,7 +22,35 @@ const MAX_BODY = 4 * 1024 * 1024;
 const SESSION_TTL_MS = 5 * 60 * 1000;
 const SCOPES = ["urn:ietf:params:oauth:scope:mail", "urn:ietf:params:oauth:scope:contacts", "offline_access"];
 
+/** A token Stalwart just rejected is not asked about again for a minute. */
+const REJECTED_TTL_MS = 60 * 1000;
+/** Rejected tokens tolerated from one address before it is told to slow down. */
+const MAX_REJECTED = 30;
+const REJECTED_WINDOW_MS = 10 * 60 * 1000;
+
 const clients = new Map<string, { client: JmapClient; expires: number }>();
+const rejected = new Map<string, number>();
+const offenders = new Map<string, { count: number; since: number }>();
+
+/** The caller's address as the reverse proxy reports it (the proxy must overwrite the header, not append to it). */
+function callerOf(req: IncomingMessage): string {
+  const forwarded = String(req.headers["x-forwarded-for"] ?? "").split(",")[0].trim();
+  return forwarded || req.socket.remoteAddress || "unknown";
+}
+
+function tooManyRejections(caller: string): boolean {
+  const entry = offenders.get(caller);
+  if (!entry) return false;
+  if (Date.now() - entry.since > REJECTED_WINDOW_MS) { offenders.delete(caller); return false; }
+  return entry.count >= MAX_REJECTED;
+}
+
+function noteRejection(caller: string) {
+  const entry = offenders.get(caller);
+  if (!entry || Date.now() - entry.since > REJECTED_WINDOW_MS) offenders.set(caller, { count: 1, since: Date.now() });
+  else entry.count++;
+  if (offenders.size > 5000) offenders.clear();
+}
 
 /** A JMAP client for the bearer token, checked against Stalwart; null when Stalwart rejects the token. */
 async function clientFor(token: string): Promise<JmapClient | null> {
@@ -30,11 +58,16 @@ async function clientFor(token: string): Promise<JmapClient | null> {
   const hit = clients.get(key);
   if (hit && hit.expires > Date.now()) return hit.client;
   clients.delete(key);
+  if ((rejected.get(key) ?? 0) > Date.now()) return null;
   const client = new JmapClient(config.baseUrl, "", "", token);
   try {
     await client.getSession();
   } catch (e) {
-    if (e instanceof JmapError && (e.status === 401 || e.status === 403)) return null;
+    if (e instanceof JmapError && (e.status === 401 || e.status === 403)) {
+      if (rejected.size > 5000) rejected.clear();
+      rejected.set(key, Date.now() + REJECTED_TTL_MS);
+      return null;
+    }
     throw e;
   }
   if (clients.size > 500) for (const [k, v] of clients) if (v.expires <= Date.now()) clients.delete(k);
@@ -95,8 +128,10 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
 
   const match = (req.headers.authorization ?? "").match(/^Bearer\s+(.+)$/i);
   if (!match) return unauthorized(res, false);
+  const caller = callerOf(req);
+  if (tooManyRejections(caller)) return json(res, 429, { error: "too_many_requests" }, { "Retry-After": "600" });
   const client = await clientFor(match[1].trim());
-  if (!client) return unauthorized(res, true);
+  if (!client) { noteRejection(caller); return unauthorized(res, true); }
 
   let body: unknown;
   try {
