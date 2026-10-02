@@ -28,7 +28,8 @@
     "README.md",
     "README.cs.md",
     "docs",
-    "LICENSE"
+    "LICENSE",
+    "THIRD-PARTY-NOTICES.md"
   ],
   "type": "module",
   "main": "dist/index.cjs",

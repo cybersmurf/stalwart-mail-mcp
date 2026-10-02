@@ -220,7 +220,7 @@ const sk: Partial<Record<Key, string>> = {
   "tool.add_contact.full_name": "Celé meno, ak sa nehodí deliť (napr. firma ako kontakt).",
   "tool.add_contact.nickname": "Prezývka.",
   "tool.add_contact.emails": "E-mailové adresy.",
-  "tool.add_contact.phones": "Telefóny (medzinárodný tvar, napr. +420 777 123 456).",
+  "tool.add_contact.phones": "Telefóny (medzinárodný tvar, napr. +1 202 555 0123).",
   "tool.add_contact.organization": "Firma / organizácia.",
   "tool.add_contact.title_param": "Pozícia.",
   "tool.add_contact.note": "Poznámka.",

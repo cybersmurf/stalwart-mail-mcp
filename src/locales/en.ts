@@ -222,7 +222,7 @@ const en = {
   "tool.add_contact.full_name": "Full name, when splitting it makes no sense (e.g. a company as a contact).",
   "tool.add_contact.nickname": "Nickname.",
   "tool.add_contact.emails": "E-mail addresses.",
-  "tool.add_contact.phones": "Phone numbers (international format, e.g. +420 777 123 456).",
+  "tool.add_contact.phones": "Phone numbers (international format, e.g. +1 202 555 0123).",
   "tool.add_contact.organization": "Company / organization.",
   "tool.add_contact.title_param": "Job title.",
   "tool.add_contact.note": "Note.",

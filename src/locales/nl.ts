@@ -220,7 +220,7 @@ const nl: Partial<Record<Key, string>> = {
   "tool.add_contact.full_name": "Volledige naam, wanneer splitsen geen zin heeft (bijv. een bedrijf als contact).",
   "tool.add_contact.nickname": "Bijnaam.",
   "tool.add_contact.emails": "E-mailadressen.",
-  "tool.add_contact.phones": "Telefoonnummers (internationaal formaat, bijv. +420 777 123 456).",
+  "tool.add_contact.phones": "Telefoonnummers (internationaal formaat, bijv. +1 202 555 0123).",
   "tool.add_contact.organization": "Bedrijf / organisatie.",
   "tool.add_contact.title_param": "Functietitel.",
   "tool.add_contact.note": "Notitie.",

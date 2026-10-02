@@ -220,7 +220,7 @@ const pl: Partial<Record<Key, string>> = {
   "tool.add_contact.full_name": "Pełna nazwa, gdy podział nie ma sensu (np. firma jako kontakt).",
   "tool.add_contact.nickname": "Pseudonim.",
   "tool.add_contact.emails": "Adresy e-mail.",
-  "tool.add_contact.phones": "Numery telefonów (format międzynarodowy, np. +420 777 123 456).",
+  "tool.add_contact.phones": "Numery telefonów (format międzynarodowy, np. +1 202 555 0123).",
   "tool.add_contact.organization": "Firma / organizacja.",
   "tool.add_contact.title_param": "Stanowisko.",
   "tool.add_contact.note": "Notatka.",

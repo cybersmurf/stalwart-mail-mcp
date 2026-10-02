@@ -22,6 +22,7 @@ STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT
 mkdir -p "$STAGE/dist"
 cp dist/index.cjs "$STAGE/dist/"
+cp LICENSE THIRD-PARTY-NOTICES.md "$STAGE/"
 if [[ -f "$SRC/icon.png" ]]; then cp "$SRC/icon.png" "$STAGE/icon.png"; else cp "$ROOT/icon.png" "$STAGE/icon.png"; fi
 node -e '
   const fs = require("fs");

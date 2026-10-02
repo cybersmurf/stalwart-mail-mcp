@@ -212,7 +212,7 @@ const cs: Record<Key, string> = {
   "tool.add_contact.full_name": "Celé jméno, pokud se nehodí dělit (např. firma jako kontakt).",
   "tool.add_contact.nickname": "Přezdívka.",
   "tool.add_contact.emails": "E-mailové adresy.",
-  "tool.add_contact.phones": "Telefony (mezinárodní tvar, např. +420 777 123 456).",
+  "tool.add_contact.phones": "Telefony (mezinárodní tvar, např. +1 202 555 0123).",
   "tool.add_contact.organization": "Firma / organizace.",
   "tool.add_contact.title_param": "Pozice (např. makléř).",
   "tool.add_contact.note": "Poznámka.",
