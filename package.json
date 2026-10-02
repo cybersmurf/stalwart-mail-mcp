@@ -1,6 +1,6 @@
 {
   "name": "stalwart-mail-mcp",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "MCP server for Stalwart Mail over JMAP: search, read (attachments, OCR of scans), reply, send, drafts, contacts",
   "mcpName": "io.github.cybersmurf/stalwart-mail-mcp",
   "license": "MIT",
@@ -45,6 +45,7 @@
     "node": ">=20"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
     "@modelcontextprotocol/sdk": "^1.31.0",
     "unpdf": "^1.8.1",
     "zod": "^4.6.5"

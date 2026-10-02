@@ -22,6 +22,59 @@ function flag(name: string, fallback = true): boolean {
   return !["false", "0", "no", "off"].includes(v);
 }
 
+/** Base URLs of the usual OpenAI-compatible vision endpoints, so naming the provider is enough. */
+const OPENAI_COMPATIBLE: Record<string, string> = {
+  openai: "https://api.openai.com/v1",
+  openrouter: "https://openrouter.ai/api/v1",
+  gemini: "https://generativelanguage.googleapis.com/v1beta/openai",
+  ollama: "http://localhost:11434/v1",
+  lmstudio: "http://localhost:1234/v1",
+};
+/** Local servers need no API key. */
+const KEYLESS = new Set(["ollama", "lmstudio", "local", "custom", "openai-compatible"]);
+
+export interface OcrConfig {
+  /** mistral and anthropic read PDFs directly; openai = any OpenAI-compatible vision chat API (images only). */
+  kind: "off" | "mistral" | "anthropic" | "openai";
+  /** Provider name for messages. */
+  name: string;
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  /** Set when a provider was chosen but something it needs is missing. */
+  problem: boolean;
+}
+
+/**
+ * MAIL_OCR_PROVIDER: auto (default) | off | mistral | anthropic | openai | openrouter | gemini |
+ * ollama | lmstudio | custom. MAIL_OCR_BASE_URL, MAIL_OCR_API_KEY and MAIL_OCR_MODEL fill in
+ * the rest; "auto" keeps the original behaviour (Mistral when MISTRAL_API_KEY is set).
+ */
+function ocrConfig(): OcrConfig {
+  const requested = env("MAIL_OCR_PROVIDER").toLowerCase();
+  const baseUrl = env("MAIL_OCR_BASE_URL").replace(/\/+$/, "");
+  const apiKey = env("MAIL_OCR_API_KEY");
+  const model = env("MAIL_OCR_MODEL");
+  const mistralKey = apiKey || env("MISTRAL_API_KEY");
+  const off: OcrConfig = { kind: "off", name: "", baseUrl: "", apiKey: "", model: "", problem: false };
+
+  let provider = requested;
+  if (!provider || provider === "auto") provider = baseUrl && model ? "custom" : mistralKey ? "mistral" : "off";
+  if (["off", "none", "false", "0"].includes(provider)) return off;
+
+  if (provider === "mistral") {
+    return {
+      kind: "mistral", name: "Mistral", baseUrl: baseUrl || "https://api.mistral.ai/v1", apiKey: mistralKey,
+      model: model || env("MISTRAL_OCR_MODEL") || "mistral-ocr-latest", problem: !mistralKey,
+    };
+  }
+  if (provider === "anthropic" || provider === "claude") {
+    return { kind: "anthropic", name: "Anthropic", baseUrl, apiKey, model: model || "claude-opus-5-5", problem: !apiKey };
+  }
+  const url = baseUrl || OPENAI_COMPATIBLE[provider] || "";
+  return { kind: "openai", name: provider, baseUrl: url, apiKey, model, problem: !url || !model || (!apiKey && !KEYLESS.has(provider)) };
+}
+
 const prefix = env("MAIL_TOOL_PREFIX").toLowerCase().replace(/[^a-z0-9_]/g, "") || "mail";
 
 export const config = {
@@ -52,9 +105,7 @@ export const config = {
   },
   /** Keep a copy of every opened attachment in downloadDir. Off = read from a temp file that is removed again. */
   saveAttachments: flag("MAIL_SAVE_ATTACHMENTS"),
-  ocrKey: env("MISTRAL_API_KEY"),
-  ocrUrl: env("MAIL_OCR_URL") || "https://api.mistral.ai/v1/ocr",
-  ocrModel: env("MISTRAL_OCR_MODEL") || "mistral-ocr-latest",
+  ocr: ocrConfig(),
 };
 
 export const tool = (name: string): string => `${config.prefix}_${name}`;

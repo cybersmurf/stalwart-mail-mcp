@@ -18,7 +18,7 @@ Desktop. Názvy hostitelů jsou příklady.
 └───────────┬───────────────┘            │ webmail (volitelně) na stejném názvu         │
             │ volitelně, jen skeny       └──────────────────────────────────────────────┘
             ▼
-      Mistral OCR API
+      OCR: lokální model (Ollama, LM Studio) nebo API (Mistral, Anthropic, kompatibilní s OpenAI)
 ```
 
 MCP server je místní proces na notebooku. Drží heslo schránky (z klíčenky), mluví s tvým
@@ -97,9 +97,11 @@ Pokud ti proti Stalwartu už běží webmail přes JMAP, cesty jsou hotové a ne
 |---|---|
 | heslo schránky, veškerý poštovní provoz | jen na tvůj Stalwart |
 | obsah zpráv a příloh, které model čte | k AI klientu, který používáš (jako výstup každého nástroje) |
-| naskenované strany PDF a fotky, když je zapnuté OCR | Mistral OCR API |
+| naskenované strany PDF a fotky, když je zapnuté OCR | ke zvolenému poskytovateli OCR — nebo s lokálním modelem nikam |
 
-OCR je vypnuté, dokud není vyplněný klíč Mistralu, a `ocr: false` ho přeskočí u jedné přílohy.
+OCR je vypnuté, dokud není nastavený poskytovatel, a `ocr: false` ho přeskočí u jedné přílohy.
+Když dokumenty nesmí opustit dům, pusť model s viděním v Ollamě na notebooku nebo na serveru
+a rozšíření na něj nasměruj (`ollama`, nebo `custom` s adresou serveru).
 
 ## Jedno rozšíření pro celou domácnost
 

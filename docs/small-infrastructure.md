@@ -18,7 +18,7 @@ Desktop on everyone's laptop. Hostnames below are examples.
 └───────────┬───────────────┘            │ webmail (optional) on the same host name     │
             │ optional, scans only       └──────────────────────────────────────────────┘
             ▼
-      Mistral OCR API
+      OCR: a local model (Ollama, LM Studio) or an API (Mistral, Anthropic, OpenAI-compatible)
 ```
 
 The MCP server is a local process on the laptop. It holds the mailbox password (from the
@@ -98,9 +98,11 @@ there and there is nothing to change.
 |---|---|
 | mailbox password, all mail traffic | your Stalwart server only |
 | message and attachment content the model reads | the AI client you use (as with any tool output) |
-| scanned PDF pages and photos, when OCR is on | Mistral OCR API |
+| scanned PDF pages and photos, when OCR is on | the OCR provider you chose — or nowhere, with a local model |
 
-OCR is off until a Mistral key is filled in, and `ocr: false` skips it for a single attachment.
+OCR is off until a provider is set up, and `ocr: false` skips it for a single attachment. If
+the documents must not leave the house, run a vision model in Ollama on the laptop or on the
+server and point the extension at it (`ollama`, or `custom` with the server's address).
 
 ## One extension for the whole household
 

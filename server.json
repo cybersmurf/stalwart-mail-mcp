@@ -6,12 +6,12 @@
     "url": "https://github.com/cybersmurf/stalwart-mail-mcp",
     "source": "github"
   },
-  "version": "2.1.0",
+  "version": "2.2.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "stalwart-mail-mcp",
-      "version": "2.1.0",
+      "version": "2.2.0",
       "transport": {
         "type": "stdio"
       },
@@ -45,11 +45,32 @@
           "isSecret": false
         },
         {
-          "name": "MISTRAL_API_KEY",
-          "description": "Enables OCR of scanned attachments through Mistral OCR",
+          "name": "MAIL_OCR_PROVIDER",
+          "description": "OCR of scans: auto, off, mistral, anthropic, openai, openrouter, gemini, ollama, lmstudio, custom",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "MAIL_OCR_API_KEY",
+          "description": "API key of the OCR provider (not needed for local servers)",
           "isRequired": false,
           "format": "string",
           "isSecret": true
+        },
+        {
+          "name": "MAIL_OCR_MODEL",
+          "description": "OCR model name",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "MAIL_OCR_BASE_URL",
+          "description": "Address of a custom OpenAI-compatible OCR server",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
         }
       ]
     }

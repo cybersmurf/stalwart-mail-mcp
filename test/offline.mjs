@@ -25,6 +25,8 @@ const blobs = {
 for (const b of Object.values(blobs)) b.bytes = await fs.readFile(b.file);
 
 const ocrCalls = [];
+const chatCalls = [];
+const claudeCalls = [];
 const authSeen = new Set();
 const mock = http.createServer(async (req, res) => {
   const base = `http://${req.headers.host}`;
@@ -36,6 +38,33 @@ const mock = http.createServer(async (req, res) => {
     ocrCalls.push({ auth: req.headers.authorization, model: q.model, type: q.document.type, pages: q.pages, url: (q.document.document_url ?? q.document.image_url).slice(0, 40) });
     const isHouse = q.document.type === "image_url" && ocrCalls.filter((c) => c.type === "image_url").length > 1;
     return json({ pages: (q.pages ?? [0]).map((index) => ({ index, markdown: isHouse ? "IMG" : `| Odběr | 412 kWh |\n\nstrana ${index + 1} ze skenu` })) });
+  }
+  if (req.url === "/chat/completions") {
+    let body = "";
+    for await (const chunk of req) body += chunk;
+    const q = JSON.parse(body);
+    const part = q.messages[0].content.find((c) => c.type === "image_url");
+    chatCalls.push({ auth: req.headers.authorization ?? null, model: q.model, image: part.image_url.url.slice(0, 30), png: Buffer.from(part.image_url.url.split(",")[1], "base64").subarray(1, 4).toString() });
+    return json({ choices: [{ message: { content: "```markdown\n| Odběr | 412 kWh |\n\nlokální model\n```" } }] });
+  }
+  if (req.url.startsWith("/v1/messages")) {
+    let body = "";
+    for await (const chunk of req) body += chunk;
+    const q = JSON.parse(body);
+    const doc = q.messages[0].content[0];
+    claudeCalls.push({ key: req.headers["x-api-key"], beta: req.headers["anthropic-beta"], model: q.model, fallbacks: q.fallbacks, effort: q.output_config?.effort, stream: q.stream, type: doc.type, media: doc.source.media_type, prompt: q.messages[0].content[1].text });
+    const text = doc.type === "document" ? '<page n="1">| Odběr | 412 kWh |\n\nstrana od Clauda</page>' : "text z fotky od Clauda, 412 kWh";
+    const usage = { input_tokens: 10, output_tokens: 5 };
+    const events = [
+      ["message_start", { type: "message_start", message: { id: "msg_1", type: "message", role: "assistant", model: q.model, content: [], stop_reason: null, stop_sequence: null, usage } }],
+      ["content_block_start", { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } }],
+      ["content_block_delta", { type: "content_block_delta", index: 0, delta: { type: "text_delta", text } }],
+      ["content_block_stop", { type: "content_block_stop", index: 0 }],
+      ["message_delta", { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null }, usage: { output_tokens: 5 } }],
+      ["message_stop", { type: "message_stop" }],
+    ];
+    res.writeHead(200, { "Content-Type": "text/event-stream" });
+    return res.end(events.map(([name, data]) => `event: ${name}\ndata: ${JSON.stringify(data)}\n\n`).join(""));
   }
   if (req.url === "/.well-known/jmap") {
     return json({
@@ -72,7 +101,7 @@ await new Promise((r) => mock.listen(0, "127.0.0.1", r));
 const saveDir = await fs.mkdtemp(path.join(os.tmpdir(), "stalwart-mail-test-"));
 const mockUrl = `http://127.0.0.1:${mock.address().port}`;
 async function connect(extraEnv) {
-  const env = { ...process.env, MAIL_ALLOW_SEND: "", MAIL_ALLOW_DRAFTS: "", MAIL_ALLOW_CONTACT_EDIT: "", MAIL_ALLOW_ATTACHMENTS: "", MAIL_SAVE_ATTACHMENTS: "", STALWART_URL: mockUrl, STALWART_USER: "petr@example.com", STALWART_PASSWORD: "x", STALWART_TOKEN: "", MAIL_DOWNLOAD_DIR: saveDir, MAIL_LANG: "cs", MAIL_TOOL_PREFIX: "", ...extraEnv };
+  const env = { ...process.env, MAIL_OCR_PROVIDER: "", MAIL_OCR_API_KEY: "", MAIL_OCR_MODEL: "", MAIL_OCR_BASE_URL: "", MAIL_ALLOW_SEND: "", MAIL_ALLOW_DRAFTS: "", MAIL_ALLOW_CONTACT_EDIT: "", MAIL_ALLOW_ATTACHMENTS: "", MAIL_SAVE_ATTACHMENTS: "", STALWART_URL: mockUrl, STALWART_USER: "petr@example.com", STALWART_PASSWORD: "x", STALWART_TOKEN: "", MAIL_DOWNLOAD_DIR: saveDir, MAIL_LANG: "cs", MAIL_TOOL_PREFIX: "", ...extraEnv };
   for (const k of Object.keys(env)) if (env[k] === undefined) delete env[k];
   const c = new Client({ name: "attachments-test", version: "0" });
   await c.connect(new StdioClientTransport({ command: "node", args: ["dist/index.cjs"], stderr: "pipe", env }));
@@ -80,13 +109,83 @@ async function connect(extraEnv) {
 }
 const liveKey = process.argv.includes("--live-ocr") ? process.env.MISTRAL_API_KEY : undefined;
 // the attachment assertions below read the Czech texts
-const client = await connect({ MAIL_OCR_URL: `${mockUrl}/ocr`, MISTRAL_API_KEY: "test-klic" });
+const client = await connect({ MAIL_OCR_BASE_URL: mockUrl, MISTRAL_API_KEY: "test-klic" });
 // an optional extension setting left empty = the unreplaced template
-const noOcr = await connect({ MAIL_OCR_URL: `${mockUrl}/ocr`, MISTRAL_API_KEY: "${user_config.mistral_api_key}" });
+const noOcr = await connect({ MAIL_OCR_BASE_URL: mockUrl, MISTRAL_API_KEY: "${user_config.mistral_api_key}" });
 
 const call = (args, c = client) => c.callTool({ name: "mail_get_attachment", arguments: { id: "m1", ...args } });
 const texts = (r) => r.content.filter((c) => c.type === "text").map((c) => c.text).join("\n");
 const images = (r) => r.content.filter((c) => c.type === "image");
+
+// ---- OCR providers: OpenAI-compatible (local and hosted), Anthropic, incomplete settings ----
+async function ocrProviders() {
+  // a local model through an OpenAI-compatible server: no key, the scanned page goes up as a PNG
+  const local = await connect({ MAIL_OCR_PROVIDER: "ollama", MAIL_OCR_BASE_URL: mockUrl, MAIL_OCR_MODEL: "gemma-vision" });
+  try {
+    let r = await call({ attachment: "sken" }, local);
+    assert.match(texts(r), /## Strana 1 \(OCR\)/, texts(r));
+    assert.match(texts(r), /\| Odběr \| 412 kWh \|/);
+    assert.doesNotMatch(texts(r), /```/, "the model's markdown fence is stripped");
+    assert.deepEqual(chatCalls.at(-1), { auth: null, model: "gemma-vision", image: "data:image/png;base64,iVBORw0K", png: "PNG" });
+    r = await call({ attachment: "4" }, local);
+    assert.match(texts(r), /Text z obrázku \(OCR\)/);
+    assert.ok(chatCalls.at(-1).image.startsWith("data:image/jpeg;base64,"));
+    // a PDF page that is text, not a scan, is never sent anywhere
+    const before = chatCalls.length;
+    await call({ attachment: "penb.pdf" }, local);
+    assert.equal(chatCalls.length, before);
+  } finally { await local.close(); }
+
+  // a hosted OpenAI-compatible API sends the key as Bearer
+  const hosted = await connect({ MAIL_OCR_PROVIDER: "openrouter", MAIL_OCR_BASE_URL: mockUrl, MAIL_OCR_API_KEY: "sk-test", MAIL_OCR_MODEL: "some/vision-model" });
+  try {
+    await call({ attachment: "sken" }, hosted);
+    assert.equal(chatCalls.at(-1).auth, "Bearer sk-test");
+    assert.equal(chatCalls.at(-1).model, "some/vision-model");
+  } finally { await hosted.close(); }
+
+  // Anthropic: the PDF goes up as a document block, streamed, with the refusal fallback on the default model
+  const claude = await connect({ MAIL_OCR_PROVIDER: "anthropic", MAIL_OCR_BASE_URL: mockUrl, MAIL_OCR_API_KEY: "sk-ant-test" });
+  try {
+    let r = await call({ attachment: "sken" }, claude);
+    assert.match(texts(r), /## Strana 1 \(OCR\)/, texts(r));
+    assert.match(texts(r), /strana od Clauda/);
+    const c = claudeCalls.at(-1);
+    assert.deepEqual({ key: c.key, model: c.model, fallbacks: c.fallbacks, effort: c.effort, stream: c.stream, type: c.type, media: c.media },
+      { key: "sk-ant-test", model: "claude-opus-5-5", fallbacks: "default", effort: "low", stream: true, type: "document", media: "application/pdf" });
+    assert.match(c.beta, /server-side-fallback-2026-07-01/);
+    assert.match(c.prompt, /only pages 1 of the PDF/);
+    r = await call({ attachment: "4" }, claude);
+    assert.match(texts(r), /text z fotky od Clauda/);
+    assert.equal(claudeCalls.at(-1).type, "image");
+  } finally { await claude.close(); }
+
+  // an older model gets neither the effort setting nor the fallback parameter
+  const haiku = await connect({ MAIL_OCR_PROVIDER: "anthropic", MAIL_OCR_BASE_URL: mockUrl, MAIL_OCR_API_KEY: "k", MAIL_OCR_MODEL: "claude-haiku-4-5" });
+  try {
+    await call({ attachment: "sken" }, haiku);
+    const c = claudeCalls.at(-1);
+    assert.deepEqual([c.model, c.fallbacks, c.effort], ["claude-haiku-4-5", undefined, undefined]);
+  } finally { await haiku.close(); }
+
+  // provider chosen but incomplete → no request, a clear note
+  const broken = await connect({ MAIL_OCR_PROVIDER: "openai", MAIL_OCR_API_KEY: "k" });
+  try {
+    const n = chatCalls.length;
+    const r = await call({ attachment: "sken" }, broken);
+    assert.match(texts(r), /Poskytovatel OCR openai není nastavený celý/);
+    assert.equal(chatCalls.length, n);
+  } finally { await broken.close(); }
+
+  // off wins even when a key is present
+  const off = await connect({ MAIL_OCR_PROVIDER: "off", MISTRAL_API_KEY: "test-klic", MAIL_OCR_BASE_URL: mockUrl });
+  try {
+    const n = ocrCalls.length;
+    assert.match(texts(await call({ attachment: "sken" }, off)), /OCR není nastavené/);
+    assert.equal(ocrCalls.length, n);
+  } finally { await off.close(); }
+  console.log("OCR providers (local OpenAI-compatible, hosted, Anthropic, incomplete, off): OK");
+}
 
 // ---- capability switches: what is off is not offered as a tool ----
 async function capabilities() {
@@ -272,7 +371,7 @@ try {
   console.log("chybové stavy: OK");
 
   if (liveKey) {
-    const live = await connect({ MAIL_OCR_URL: undefined, MISTRAL_API_KEY: liveKey });
+    const live = await connect({ MAIL_OCR_BASE_URL: undefined, MISTRAL_API_KEY: liveKey });
     try {
       r = await call({ attachment: "sken" }, live);
       assert.match(texts(r), /## Strana 1 \(OCR\)/, texts(r));
@@ -286,6 +385,7 @@ try {
     }
   }
 
+  await ocrProviders();
   await capabilities();
   await languagesAndBranding();
   await localesAreConsistent();

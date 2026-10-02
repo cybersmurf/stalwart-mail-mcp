@@ -30,7 +30,11 @@
         "MAIL_ALLOW_DRAFTS": "${user_config.allow_drafts}",
         "MAIL_ALLOW_CONTACT_EDIT": "${user_config.allow_contact_edit}",
         "MAIL_ALLOW_ATTACHMENTS": "${user_config.allow_attachments}",
-        "MAIL_SAVE_ATTACHMENTS": "${user_config.save_attachments}"
+        "MAIL_SAVE_ATTACHMENTS": "${user_config.save_attachments}",
+        "MAIL_OCR_PROVIDER": "${user_config.ocr_provider}",
+        "MAIL_OCR_API_KEY": "${user_config.ocr_api_key}",
+        "MAIL_OCR_MODEL": "${user_config.ocr_model}",
+        "MAIL_OCR_BASE_URL": "${user_config.ocr_base_url}"
       }
     }
   },
@@ -118,8 +122,8 @@
     },
     "mistral_api_key": {
       "type": "string",
-      "title": "Mistral API key (OCR of scans)",
-      "description": "Optional. With a key, scanned attachments and photos of documents are read through Mistral OCR; without it a scan comes back as an image of page 1 only.",
+      "title": "Mistral API key (OCR, simplest setup)",
+      "description": "Optional. Fill in just this and scans are read through Mistral OCR. For another provider or a local model use the OCR settings below instead.",
       "sensitive": true,
       "required": false
     },
@@ -163,6 +167,32 @@
       "title": "Keep opened attachments on disk",
       "description": "On = every attachment Claude opens is also saved to the download folder. Off = it is only read and nothing is written to disk, which makes the attachment tool read-only.",
       "default": true,
+      "required": false
+    },
+    "ocr_provider": {
+      "type": "string",
+      "title": "OCR provider",
+      "description": "Who reads scans and photographed documents: auto (Mistral when its key below is filled in), off, mistral, anthropic, openai, openrouter, gemini, ollama, lmstudio, or custom (any OpenAI-compatible server; give its address).",
+      "required": false,
+      "default": "auto"
+    },
+    "ocr_api_key": {
+      "type": "string",
+      "title": "OCR API key",
+      "description": "API key of the chosen OCR provider. Not needed for local servers (Ollama, LM Studio).",
+      "required": false,
+      "sensitive": true
+    },
+    "ocr_model": {
+      "type": "string",
+      "title": "OCR model",
+      "description": "Model to use, e.g. a vision model you run in Ollama or one offered by your API provider. Empty = the provider's default where there is one (Mistral, Anthropic).",
+      "required": false
+    },
+    "ocr_base_url": {
+      "type": "string",
+      "title": "OCR server address",
+      "description": "Only for a custom or non-default server, e.g. http://localhost:11434/v1. Empty = the provider's standard address.",
       "required": false
     }
   }

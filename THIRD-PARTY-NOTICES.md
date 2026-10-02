@@ -6,6 +6,7 @@ the following open-source software. Each is used unmodified.
 | Component | License | Source |
 |---|---|---|
 | @modelcontextprotocol/sdk | MIT | https://github.com/modelcontextprotocol/typescript-sdk |
+| @anthropic-ai/sdk | MIT | https://github.com/anthropics/anthropic-sdk-typescript |
 | zod | MIT | https://github.com/colinhacks/zod |
 | unpdf | MIT | https://github.com/unjs/unpdf |
 | PDF.js (bundled inside unpdf) | Apache-2.0 | https://github.com/mozilla/pdf.js |

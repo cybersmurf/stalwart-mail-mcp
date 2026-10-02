@@ -88,8 +88,8 @@ Claude Code: `claude mcp add stalwart-mail --env STALWART_URL=https://mail.examp
 | `MAIL_BRAND` | zobrazovaný název serveru, výchozí `Stalwart Mail` |
 | `MAIL_DOWNLOAD_DIR` | kam se ukládají přílohy, výchozí `~/Downloads/Mail-Attachments` |
 | `MAIL_TIMEZONE` | časové pásmo (IANA) pro data ve výstupu, výchozí pásmo počítače |
-| `MISTRAL_API_KEY` | zapne OCR skenů a fotek dokumentů (volitelné) |
-| `MISTRAL_OCR_MODEL` | výchozí `mistral-ocr-latest` |
+| `MAIL_OCR_PROVIDER`, `MAIL_OCR_API_KEY`, `MAIL_OCR_MODEL`, `MAIL_OCR_BASE_URL` | kdo čte skeny — viz [Poskytovatelé OCR](#poskytovatelé-ocr) |
+| `MISTRAL_API_KEY` | zkratka: když je nastavený jen tenhle, skeny jdou do Mistral OCR |
 | `MAIL_ALLOW_SEND` | `false` odebere `send_email` a `send_draft` |
 | `MAIL_ALLOW_DRAFTS` | `false` odebere `create_draft` a `delete_draft` |
 | `MAIL_ALLOW_CONTACT_EDIT` | `false` odebere `add_contact` |
@@ -114,19 +114,55 @@ definici nástroje, se klient může zeptat znovu.
 
 ## Přílohy a OCR
 
-`mail_get_attachment` stáhne soubor do `MAIL_DOWNLOAD_DIR` a vrátí to, co model přečte:
+`mail_get_attachment` stáhne soubor a vrátí to, co model přečte:
 
 - textové soubory jako text, HTML převedené na text;
 - PDF jako text po stranách (u dlouhých `page_from` / `page_to`);
-- strany PDF bez textové vrstvy (skeny) a fotky jdou s nastaveným klíčem do **Mistral OCR** —
+- strany PDF bez textové vrstvy (skeny) a fotky jdou ke zvolenému **poskytovateli OCR** —
   výsledkem je markdown včetně tabulek a takové strany jsou označené `(OCR)`. U smíšeného PDF
   se posílají jen naskenované strany;
 - obrázky se vrací jako obrázky; cokoli nad ~600 kB nebo v HEIC se na macOS zmenší (`sips`);
 - ostatní typy (docx, xlsx, zip…) se jen uloží a vrátí se cesta.
 
-Bez klíče nebo s `ocr: false` se sken vrátí jako obrázek 1. strany (macOS) s poznámkou.
-OCR posílá dokument do Mistralu — je to jediná věc, která z tohoto serveru odchází z počítače
-ke třetí straně.
+Bez poskytovatele nebo s `ocr: false` se sken vrátí jako obrázek 1. strany (macOS)
+s poznámkou. OCR je jediná věc, která z tohoto serveru posílá obsah jinam než na tvůj poštovní
+server — ke zvolenému poskytovateli, nebo s lokálním modelem vůbec nikam.
+
+### Poskytovatelé OCR
+
+| `MAIL_OCR_PROVIDER` | Co to je | Potřebuje | Čte PDF |
+|---|---|---|---|
+| `auto` (výchozí) | Mistral, když je nastavený `MISTRAL_API_KEY`; vlastní server, když je zadaná adresa a model; jinak vypnuto | — | — |
+| `mistral` | Mistral OCR (`mistral-ocr-latest`) | klíč | přímo |
+| `anthropic` | Claude přes oficiální SDK (výchozí model `claude-opus-5-5`) | klíč | přímo |
+| `openai`, `openrouter`, `gemini` | hostovaná API kompatibilní s OpenAI (chat s obrázky) | klíč + model | obrázky stran |
+| `ollama`, `lmstudio` | lokální modely na `localhost` | model | obrázky stran |
+| `custom` | jakýkoli jiný server kompatibilní s OpenAI | `MAIL_OCR_BASE_URL` + model | obrázky stran |
+| `off` | bez OCR | — | — |
+
+Volbu doplňují `MAIL_OCR_API_KEY`, `MAIL_OCR_MODEL` a `MAIL_OCR_BASE_URL`. Příklady:
+
+```bash
+MAIL_OCR_PROVIDER=ollama      MAIL_OCR_MODEL=llama3.2-vision                         # čistě lokálně
+MAIL_OCR_PROVIDER=openrouter  MAIL_OCR_API_KEY=…  MAIL_OCR_MODEL=<model s viděním>
+MAIL_OCR_PROVIDER=anthropic   MAIL_OCR_API_KEY=…
+MAIL_OCR_PROVIDER=custom      MAIL_OCR_BASE_URL=http://nas.lan:8000/v1  MAIL_OCR_MODEL=…
+```
+
+Poskytovatelé, kteří berou jen obrázky, dostanou každou naskenovanou stranu jako PNG vytažené
+z PDF (samotný sken, zmenšený na 2000 px). Stranu, která není jeden velký obrázek, jim předat
+nejde a nahlásí se jako nepřečtená; Mistral a Anthropic čtou jakékoli PDF. Strany se posílají
+po třech.
+
+S čím počítat: lokální model může na hustou stranu potřebovat minutu i víc, což může
+přesáhnout časový limit nástroje v klientu — dlouhé skeny čti po rozsazích stran. Obecné
+modely s viděním přepisují dobře, ale jako každé OCR umí v tabulkách s grafikou posunout
+buňky; `preview: true` přidá obrázek strany, aby si to model mohl zkontrolovat. U `anthropic`
+se odmítnutý požadavek na aktuálních modelech Claude zopakuje na serveru na záložním modelu
+(`fallbacks: "default"`).
+
+`node test/live-ocr.mjs` pustí poskytovatele nastaveného v prostředí proti naskenovanému
+testovacímu souboru (nebo tvému vlastnímu) a vypíše výsledek.
 
 ## Jazyky
 

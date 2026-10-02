@@ -13,7 +13,8 @@ import { extractText, getDocumentProxy } from "unpdf";
 import { config } from "./config.js";
 import { t, type Key } from "./i18n.js";
 import { JmapClient, JmapError, USING } from "./jmap.js";
-import { mistralOcr, ocrAvailable, OCR_MAX_BYTES } from "./ocr.js";
+import { OCR_IMAGE_TYPES, ocrAvailable, ocrImage, ocrMaxBytes, ocrPdf } from "./ocr/index.js";
+import { pdfPageImages } from "./ocr/pdf-images.js";
 import { htmlToText, mimeFromPath, sizeHuman, truncate } from "./util.js";
 
 const execFileP = promisify(execFile);
@@ -138,14 +139,13 @@ const renderJpeg = (file: string) => toJpeg(file, [1600, 1100, 800], 70, IMAGE_I
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /** Text of a photographed document; HEIC and friends are converted to JPEG first. An OCR failure comes back as a note, not an exception. */
-async function ocrImage(a: AttachmentInfo, bytes: Uint8Array, savedPath: string): Promise<{ text: string; note: string }> {
+async function readImageText(a: AttachmentInfo, bytes: Uint8Array, savedPath: string): Promise<{ text: string; note: string }> {
   try {
     const type = a.type.toLowerCase();
-    const direct = INLINE_IMAGE.has(type) && bytes.length <= OCR_MAX_BYTES;
-    const input = direct ? bytes : await toJpeg(savedPath, [3000, 2000], 85, OCR_MAX_BYTES);
+    const direct = OCR_IMAGE_TYPES.has(type) && bytes.length <= ocrMaxBytes();
+    const input = direct ? bytes : await toJpeg(savedPath, [3000, 2000], 85, ocrMaxBytes());
     if (!input) return { text: "", note: "" };
-    const pages = await mistralOcr(input, direct ? type : "image/jpeg");
-    return { text: pages.map((p) => p.text).join("\n\n").trim(), note: "" };
+    return { text: await ocrImage(input, direct ? type : "image/jpeg"), note: "" };
   } catch (e) {
     return { text: "", note: t("att.ocrFailed", { error: errText(e) }) };
   }
@@ -171,7 +171,7 @@ export async function readAttachment(a: AttachmentInfo, bytes: Uint8Array, saved
   }
 
   if (kind === "image") {
-    const ocr = useOcr ? await ocrImage(a, bytes, savedPath) : { text: "", note: "" };
+    const ocr = useOcr ? await readImageText(a, bytes, savedPath) : { text: "", note: "" };
     // a few characters on a photo of a house are not a document; text is worth returning from about a line up
     const ocrPart = (ocr.text.length >= 20 ? `\n\n${t("att.ocrText")}\n\n${truncate(ocr.text, ATTACHMENT_TEXT_LIMIT).text}` : "")
       + (ocr.note ? `\n\n${ocr.note}` : "");
@@ -208,14 +208,18 @@ export async function readAttachment(a: AttachmentInfo, bytes: Uint8Array, saved
     let ocrNote = "";
     if (scanned.length && useOcr) {
       try {
-        for (const p of await mistralOcr(bytes, "application/pdf", scanned)) {
+        const result = await ocrPdf(bytes, scanned, pdfPageImages(bytes));
+        for (const p of result.pages) {
           if (p.text && p.page >= 1 && p.page <= total) { pages[p.page - 1] = p.text; viaOcr.add(p.page); }
         }
+        if (result.noImage.length) ocrNote = t("att.ocrNoPageImage", { pages: result.noImage.join(", ") });
       } catch (e) {
         ocrNote = t("att.ocrFailed", { error: errText(e) });
       }
     } else if (scanned.length) {
-      ocrNote = t(opts.ocr === false ? "att.ocrOff" : "att.ocrNotConfigured");
+      ocrNote = opts.ocr === false ? t("att.ocrOff")
+        : config.ocr.problem ? t("att.ocrIncomplete", { provider: config.ocr.name })
+        : t("att.ocrNotConfigured");
     }
     const unread = scanned.filter((n) => !viaOcr.has(n));
 

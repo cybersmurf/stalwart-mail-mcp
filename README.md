@@ -88,8 +88,8 @@ Claude Code: `claude mcp add stalwart-mail --env STALWART_URL=https://mail.examp
 | `MAIL_BRAND` | display name of the server, default `Stalwart Mail` |
 | `MAIL_DOWNLOAD_DIR` | where attachments are saved, default `~/Downloads/Mail-Attachments` |
 | `MAIL_TIMEZONE` | IANA zone for dates in the output, default the machine's zone |
-| `MISTRAL_API_KEY` | enables OCR of scans and photographed documents (optional) |
-| `MISTRAL_OCR_MODEL` | default `mistral-ocr-latest` |
+| `MAIL_OCR_PROVIDER`, `MAIL_OCR_API_KEY`, `MAIL_OCR_MODEL`, `MAIL_OCR_BASE_URL` | who reads scans — see [OCR providers](#ocr-providers) |
+| `MISTRAL_API_KEY` | shortcut: with only this set, scans go to Mistral OCR |
 | `MAIL_ALLOW_SEND` | `false` removes `send_email` and `send_draft` |
 | `MAIL_ALLOW_DRAFTS` | `false` removes `create_draft` and `delete_draft` |
 | `MAIL_ALLOW_CONTACT_EDIT` | `false` removes `add_contact` |
@@ -114,21 +114,54 @@ after an update that changes a tool's definition.
 
 ## Attachments and OCR
 
-`mail_get_attachment` downloads the file to `MAIL_DOWNLOAD_DIR` and returns what the model can
-read:
+`mail_get_attachment` downloads the file and returns what the model can read:
 
 - text files as text, HTML converted to text;
 - PDFs as text page by page (`page_from` / `page_to` for long ones);
-- PDF pages without a text layer (scans) and photos go to **Mistral OCR** when a key is set — the
-  result is markdown including tables, and those pages are marked `(OCR)`. A mixed PDF sends
-  only its scanned pages;
+- PDF pages without a text layer (scans) and photos go to the **OCR provider** you choose —
+  the result is markdown including tables, and those pages are marked `(OCR)`. A mixed PDF
+  sends only its scanned pages;
 - images are returned as images; anything above ~600 kB or in HEIC is downscaled on macOS
   (`sips`);
 - other types (docx, xlsx, zip…) are only saved, and the path is returned.
 
-Without a key, or with `ocr: false`, a scan comes back as an image of page 1 (macOS) with a note.
-OCR sends the document to Mistral — it is the only thing in this server that leaves your
-machine for a third party.
+Without a provider, or with `ocr: false`, a scan comes back as an image of page 1 (macOS) with
+a note. OCR is the only thing in this server that sends content anywhere besides your mail
+server — to the provider you picked, or nowhere at all with a local model.
+
+### OCR providers
+
+| `MAIL_OCR_PROVIDER` | What it is | Needs | Reads PDFs |
+|---|---|---|---|
+| `auto` (default) | Mistral when `MISTRAL_API_KEY` is set, a custom server when address and model are set, otherwise off | — | — |
+| `mistral` | Mistral OCR (`mistral-ocr-latest`) | key | directly |
+| `anthropic` | Claude through the official SDK (default model `claude-opus-5-5`) | key | directly |
+| `openai`, `openrouter`, `gemini` | hosted OpenAI-compatible vision chat APIs | key + model | page images |
+| `ollama`, `lmstudio` | local models on `localhost` | model | page images |
+| `custom` | any other OpenAI-compatible server | `MAIL_OCR_BASE_URL` + model | page images |
+| `off` | no OCR | — | — |
+
+`MAIL_OCR_API_KEY`, `MAIL_OCR_MODEL` and `MAIL_OCR_BASE_URL` complete the choice. Examples:
+
+```bash
+MAIL_OCR_PROVIDER=ollama      MAIL_OCR_MODEL=llama3.2-vision                         # fully local
+MAIL_OCR_PROVIDER=openrouter  MAIL_OCR_API_KEY=…  MAIL_OCR_MODEL=<a vision model>
+MAIL_OCR_PROVIDER=anthropic   MAIL_OCR_API_KEY=…
+MAIL_OCR_PROVIDER=custom      MAIL_OCR_BASE_URL=http://nas.lan:8000/v1  MAIL_OCR_MODEL=…
+```
+
+Providers that take images only get each scanned page as a PNG taken out of the PDF (the
+scan itself, scaled to 2000 px). A page that is not one big picture cannot be handed to them
+and is reported as unread; Mistral and Anthropic read any PDF. Pages are sent three at a time.
+
+Things to expect: a local model can need a minute or more per dense page, which may exceed
+your client's tool timeout — read long scans in page ranges. General vision models transcribe
+well but, like every OCR, can misplace cells in tables with graphics; `preview: true` adds the
+page image so the model can check. With `anthropic`, a declined request is retried
+server-side on a fallback model (`fallbacks: "default"`) on the current Claude models.
+
+`node test/live-ocr.mjs` runs the provider configured in the environment against a scanned
+fixture (or your own file) and prints the result.
 
 ## Languages
 
