@@ -1,0 +1,129 @@
+{
+  "manifest_version": "0.3",
+  "name": "acme-mail",
+  "display_name": "Acme Mail",
+  "version": "0.0.0",
+  "description": "Mail and contacts of the Acme team, straight from Claude.",
+  "long_description": "A branded build of Stalwart Mail MCP: the server address is pre-filled, tools are called acme_*, and people only type their e-mail and password.",
+  "author": {
+    "name": "Acme"
+  },
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.cjs",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/dist/index.cjs"
+      ],
+      "env": {
+        "STALWART_URL": "${user_config.server_url}",
+        "STALWART_USER": "${user_config.email}",
+        "STALWART_PASSWORD": "${user_config.password}",
+        "MAIL_LANG": "${user_config.language}",
+        "MISTRAL_API_KEY": "${user_config.mistral_api_key}",
+        "MAIL_TOOL_PREFIX": "acme",
+        "MAIL_BRAND": "Acme Mail",
+        "MAIL_DOWNLOAD_DIR": "~/Downloads/Acme-Mail"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "acme_list_mailboxes",
+      "description": "Accounts, folders with message counts and allowed senders"
+    },
+    {
+      "name": "acme_search_emails",
+      "description": "Search messages (full text, from/to, subject, folder, date, unread) and list a thread"
+    },
+    {
+      "name": "acme_get_email",
+      "description": "A whole message by id with its text and the list of attachments"
+    },
+    {
+      "name": "acme_get_attachment",
+      "description": "Open an attachment: text of PDFs and text files, OCR of scans and photographed documents, images, saved to disk"
+    },
+    {
+      "name": "acme_send_email",
+      "description": "Send a new e-mail or a reply in a thread, with attachments from disk"
+    },
+    {
+      "name": "acme_create_draft",
+      "description": "Save a message as a draft for review in webmail"
+    },
+    {
+      "name": "acme_send_draft",
+      "description": "Send an existing draft"
+    },
+    {
+      "name": "acme_delete_draft",
+      "description": "Delete a draft"
+    },
+    {
+      "name": "acme_search_contacts",
+      "description": "Find addresses in the address books (own and shared) and in the mail history"
+    },
+    {
+      "name": "acme_add_contact",
+      "description": "Create a contact in an address book (shared ones too)"
+    }
+  ],
+  "keywords": [
+    "email",
+    "jmap",
+    "stalwart",
+    "contacts",
+    "ocr"
+  ],
+  "license": "MIT",
+  "compatibility": {
+    "claude_desktop": ">=0.10.0",
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "node": ">=20.0.0"
+    }
+  },
+  "user_config": {
+    "email": {
+      "type": "string",
+      "title": "Mailbox e-mail",
+      "description": "The full address you sign in with, e.g. jane@example.com.",
+      "required": true
+    },
+    "password": {
+      "type": "string",
+      "title": "Mailbox password",
+      "description": "The mailbox password (or an app password). Stored in the operating system's keychain.",
+      "sensitive": true,
+      "required": true
+    },
+    "language": {
+      "type": "string",
+      "title": "Language",
+      "description": "Language of tool descriptions and output: auto (follow the system), en, cs, de, es, fr, it, nl, pl, pt, sk.",
+      "default": "auto",
+      "required": false
+    },
+    "mistral_api_key": {
+      "type": "string",
+      "title": "Mistral API key (OCR of scans)",
+      "description": "Optional. With a key, scanned attachments and photos of documents are read through Mistral OCR; without it a scan comes back as an image of page 1 only.",
+      "sensitive": true,
+      "required": false
+    },
+    "server_url": {
+      "type": "string",
+      "title": "Server address",
+      "description": "Leave the default unless you know why to change it.",
+      "default": "https://mail.example.com",
+      "required": false
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "stalwart-mail-mcp",
+  "version": "2.0.0",
+  "description": "MCP server for Stalwart Mail over JMAP: search, read (attachments, OCR of scans), reply, send, drafts, contacts",
+  "type": "module",
+  "main": "dist/index.cjs",
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/index.cjs --log-level=warning",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node test/offline.mjs && node test/smoke.mjs",
+    "test:offline": "npm run build && node test/offline.mjs",
+    "pack": "bash pack.sh"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.31.0",
+    "unpdf": "^1.8.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "esbuild": "^0.27.0",
+    "typescript": "^5.9.3"
+  },
+  "license": "MIT"
+}

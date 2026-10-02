@@ -1,0 +1,125 @@
+{
+  "manifest_version": "0.3",
+  "name": "stalwart-mail",
+  "display_name": "Stalwart Mail",
+  "version": "0.0.0",
+  "description": "Mail and contacts on your own Stalwart server, straight from Claude: search, read (attachments and scans too), reply, send, drafts.",
+  "long_description": "Talks to a Stalwart mail server over JMAP with the mailbox's own credentials — nothing to install on the server.\n\nIt can search and read messages, open attachments (PDF, images, text; scans through Mistral OCR), reply in a thread, send new e-mails with attachments from disk, create drafts for review in webmail, look up addresses in your own and shared address books and in the mail history, and add contacts.\n\nSending is immediate, so Claude is told to send only on your explicit instruction and to create a draft otherwise. Shared mailboxes and groups the account can access are available through the `account` parameter.",
+  "author": {
+    "name": "Petr Šrámek"
+  },
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.cjs",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/dist/index.cjs"
+      ],
+      "env": {
+        "STALWART_URL": "${user_config.server_url}",
+        "STALWART_USER": "${user_config.email}",
+        "STALWART_PASSWORD": "${user_config.password}",
+        "MAIL_LANG": "${user_config.language}",
+        "MISTRAL_API_KEY": "${user_config.mistral_api_key}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "mail_list_mailboxes",
+      "description": "Accounts, folders with message counts and allowed senders"
+    },
+    {
+      "name": "mail_search_emails",
+      "description": "Search messages (full text, from/to, subject, folder, date, unread) and list a thread"
+    },
+    {
+      "name": "mail_get_email",
+      "description": "A whole message by id with its text and the list of attachments"
+    },
+    {
+      "name": "mail_get_attachment",
+      "description": "Open an attachment: text of PDFs and text files, OCR of scans and photographed documents, images, saved to disk"
+    },
+    {
+      "name": "mail_send_email",
+      "description": "Send a new e-mail or a reply in a thread, with attachments from disk"
+    },
+    {
+      "name": "mail_create_draft",
+      "description": "Save a message as a draft for review in webmail"
+    },
+    {
+      "name": "mail_send_draft",
+      "description": "Send an existing draft"
+    },
+    {
+      "name": "mail_delete_draft",
+      "description": "Delete a draft"
+    },
+    {
+      "name": "mail_search_contacts",
+      "description": "Find addresses in the address books (own and shared) and in the mail history"
+    },
+    {
+      "name": "mail_add_contact",
+      "description": "Create a contact in an address book (shared ones too)"
+    }
+  ],
+  "keywords": [
+    "email",
+    "jmap",
+    "stalwart",
+    "contacts",
+    "ocr"
+  ],
+  "license": "MIT",
+  "compatibility": {
+    "claude_desktop": ">=0.10.0",
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "node": ">=20.0.0"
+    }
+  },
+  "user_config": {
+    "server_url": {
+      "type": "string",
+      "title": "Server address",
+      "description": "Public address of your Stalwart server, e.g. https://mail.example.com (the one that serves /.well-known/jmap).",
+      "required": true
+    },
+    "email": {
+      "type": "string",
+      "title": "Mailbox e-mail",
+      "description": "The full address you sign in with, e.g. jane@example.com.",
+      "required": true
+    },
+    "password": {
+      "type": "string",
+      "title": "Mailbox password",
+      "description": "The mailbox password (or an app password). Stored in the operating system's keychain.",
+      "sensitive": true,
+      "required": true
+    },
+    "language": {
+      "type": "string",
+      "title": "Language",
+      "description": "Language of tool descriptions and output: auto (follow the system), en, cs, de, es, fr, it, nl, pl, pt, sk.",
+      "default": "auto",
+      "required": false
+    },
+    "mistral_api_key": {
+      "type": "string",
+      "title": "Mistral API key (OCR of scans)",
+      "description": "Optional. With a key, scanned attachments and photos of documents are read through Mistral OCR; without it a scan comes back as an image of page 1 only.",
+      "sensitive": true,
+      "required": false
+    }
+  }
+}
