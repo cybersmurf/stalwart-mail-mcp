@@ -2,6 +2,34 @@
   "name": "stalwart-mail-mcp",
   "version": "2.0.0",
   "description": "MCP server for Stalwart Mail over JMAP: search, read (attachments, OCR of scans), reply, send, drafts, contacts",
+  "mcpName": "io.github.cybersmurf/stalwart-mail-mcp",
+  "license": "MIT",
+  "author": "Petr Šrámek",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cybersmurf/stalwart-mail-mcp.git"
+  },
+  "homepage": "https://github.com/cybersmurf/stalwart-mail-mcp#readme",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "stalwart",
+    "jmap",
+    "email",
+    "contacts",
+    "ocr",
+    "claude"
+  ],
+  "bin": {
+    "stalwart-mail-mcp": "dist/index.cjs"
+  },
+  "files": [
+    "dist/index.cjs",
+    "README.md",
+    "README.cs.md",
+    "docs",
+    "LICENSE"
+  ],
   "type": "module",
   "main": "dist/index.cjs",
   "scripts": {
@@ -9,7 +37,8 @@
     "typecheck": "tsc --noEmit",
     "test": "npm run build && node test/offline.mjs && node test/smoke.mjs",
     "test:offline": "npm run build && node test/offline.mjs",
-    "pack": "bash pack.sh"
+    "pack": "bash pack.sh",
+    "prepublishOnly": "npm run build && node test/offline.mjs"
   },
   "engines": {
     "node": ">=20"
@@ -23,6 +52,5 @@
     "@types/node": "^26.6.3",
     "esbuild": "^0.27.0",
     "typescript": "^5.9.3"
-  },
-  "license": "MIT"
+  }
 }

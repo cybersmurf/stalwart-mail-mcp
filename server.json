@@ -1,0 +1,57 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.cybersmurf/stalwart-mail-mcp",
+  "description": "Mail and contacts on a self-hosted Stalwart server via JMAP: search, read, OCR, send, drafts.",
+  "repository": {
+    "url": "https://github.com/cybersmurf/stalwart-mail-mcp",
+    "source": "github"
+  },
+  "version": "2.0.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "stalwart-mail-mcp",
+      "version": "2.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "STALWART_URL",
+          "description": "Public address of the Stalwart server, e.g. https://mail.example.com",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "STALWART_USER",
+          "description": "Mailbox e-mail address to sign in with",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "STALWART_PASSWORD",
+          "description": "Mailbox or app password",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": true
+        },
+        {
+          "name": "MAIL_LANG",
+          "description": "Language: auto, en, cs, de, es, fr, it, nl, pl, pt, sk",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "MISTRAL_API_KEY",
+          "description": "Enables OCR of scanned attachments through Mistral OCR",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}
