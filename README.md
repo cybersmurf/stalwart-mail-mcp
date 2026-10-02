@@ -15,6 +15,11 @@ Claude Desktop ──stdio──▶ dist/index.cjs (Node, this MCP server)
                  https://mail.example.com/jmap   (reverse proxy → Stalwart)
 ```
 
+There is also a **remote mode**: the same server run next to Stalwart, added to Claude as a
+custom connector, so the mailbox works in claude.ai, the mobile apps and every desktop chat —
+people sign in through Stalwart's own OAuth and the server holds no credentials. See
+[docs/remote.md](docs/remote.md).
+
 How it fits into a small self-hosted setup — reverse proxy, what to expose, shared mailboxes,
 branded builds for a family or a team — is described in
 [docs/small-infrastructure.md](docs/small-infrastructure.md).
@@ -78,6 +83,11 @@ and in the [MCP Registry](https://registry.modelcontextprotocol.io) as
 ```
 
 Claude Code: `claude mcp add stalwart-mail --env STALWART_URL=https://mail.example.com --env STALWART_USER=jane@example.com --env STALWART_PASSWORD=… -- npx -y stalwart-mail-mcp`
+
+### Claude on the web, desktop chat and phone
+
+Run the server next to Stalwart (`stalwart-mail-mcp --http`, or the Docker image) and add its
+URL as a custom connector — step by step in [docs/remote.md](docs/remote.md).
 
 ## Configuration
 

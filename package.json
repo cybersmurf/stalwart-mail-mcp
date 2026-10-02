@@ -1,6 +1,6 @@
 {
   "name": "stalwart-mail-mcp",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "MCP server for Stalwart Mail over JMAP: search, read (attachments, OCR of scans), reply, send, drafts, contacts",
   "mcpName": "io.github.cybersmurf/stalwart-mail-mcp",
   "license": "MIT",
@@ -24,12 +24,14 @@
     "stalwart-mail-mcp": "dist/index.cjs"
   },
   "files": [
-    "dist/index.cjs",
-    "README.md",
-    "README.cs.md",
-    "docs",
+    "Dockerfile",
     "LICENSE",
-    "THIRD-PARTY-NOTICES.md"
+    "README.cs.md",
+    "README.md",
+    "THIRD-PARTY-NOTICES.md",
+    "dist/index.cjs",
+    "docker-compose.example.yml",
+    "docs"
   ],
   "type": "module",
   "main": "dist/index.cjs",

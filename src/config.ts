@@ -75,6 +75,9 @@ function ocrConfig(): OcrConfig {
   return { kind: "openai", name: provider, baseUrl: url, apiKey, model, problem: !url || !model || (!apiKey && !KEYLESS.has(provider)) };
 }
 
+/** HTTP (remote) mode: `--http` on the command line or MCP_TRANSPORT=http. */
+const httpEnabled = process.argv.includes("--http") || env("MCP_TRANSPORT").toLowerCase() === "http";
+
 const prefix = env("MAIL_TOOL_PREFIX").toLowerCase().replace(/[^a-z0-9_]/g, "") || "mail";
 
 export const config = {
@@ -104,7 +107,23 @@ export const config = {
     attachments: flag("MAIL_ALLOW_ATTACHMENTS"), // get_attachment
   },
   /** Keep a copy of every opened attachment in downloadDir. Off = read from a temp file that is removed again. */
-  saveAttachments: flag("MAIL_SAVE_ATTACHMENTS"),
+  saveAttachments: httpEnabled ? false : flag("MAIL_SAVE_ATTACHMENTS"),
+  /**
+   * Remote mode: the server runs next to Stalwart and people add it to Claude as a connector.
+   * It keeps no credentials — every request carries the user's OAuth access token issued by
+   * Stalwart, which is passed on to JMAP.
+   */
+  http: {
+    enabled: httpEnabled,
+    port: Number(env("MCP_HTTP_PORT")) || 8787,
+    host: env("MCP_HTTP_HOST") || "0.0.0.0",
+    /** Path of the MCP endpoint, default /mcp. */
+    path: "/" + (env("MCP_HTTP_PATH") || "mcp").replace(/^\/+|\/+$/g, ""),
+    /** Public origin under which this server is reachable, e.g. https://mail.example.com */
+    publicUrl: env("MCP_PUBLIC_URL").replace(/\/+$/, ""),
+    /** OAuth issuer the client signs in at; default: the Stalwart server itself. */
+    authServer: (env("MAIL_AUTH_SERVER") || env("STALWART_URL")).replace(/\/+$/, ""),
+  },
   ocr: ocrConfig(),
 };
 

@@ -10,7 +10,7 @@ Cowork sessions that run on your computer. It contains one local MCP server and 
 
 ## What it runs and where your data goes
 
-- It starts a local process with `npx -y stalwart-mail-mcp@2.2.0` (the package pinned to
+- It starts a local process with `npx -y stalwart-mail-mcp@2.3.0` (the package pinned to
   that exact version, source in the repository above).
 - That process talks JMAP over HTTPS to **the server address you enter** and signs in with the
   mailbox e-mail and password you enter. Nothing is installed on the mail server.

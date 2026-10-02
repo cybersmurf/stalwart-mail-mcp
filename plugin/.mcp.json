@@ -4,7 +4,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "stalwart-mail-mcp@2.2.0"
+        "stalwart-mail-mcp@2.3.0"
       ],
       "env": {
         "STALWART_URL": "${user_config.server_url}",

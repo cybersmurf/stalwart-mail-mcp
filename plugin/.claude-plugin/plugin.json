@@ -1,7 +1,7 @@
 {
   "name": "stalwart-mail",
   "displayName": "Stalwart Mail",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Mail and contacts on your own Stalwart server: search, read (attachments and scans too), reply, send, drafts.",
   "author": {
     "name": "Petr Šrámek",

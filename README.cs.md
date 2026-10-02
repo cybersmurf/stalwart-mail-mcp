@@ -15,6 +15,11 @@ Claude Desktop ──stdio──▶ dist/index.cjs (Node, tento MCP server)
                  https://mail.example.com/jmap   (reverzní proxy → Stalwart)
 ```
 
+Existuje i **vzdálený režim**: tentýž server puštěný vedle Stalwartu a přidaný do Clauda jako
+vlastní konektor, takže schránka funguje v claude.ai, v mobilních aplikacích i v každém
+desktopovém chatu — lidé se přihlašují přes OAuth samotného Stalwartu a server žádné
+přihlašovací údaje nedrží. Viz [docs/vzdaleny-server.md](docs/vzdaleny-server.md).
+
 Jak ho zapojit do malé vlastní infrastruktury — reverzní proxy, co pustit ven, sdílené
 schránky, vlastní balíček pro rodinu nebo tým — popisuje
 [docs/mala-infrastruktura.md](docs/mala-infrastruktura.md).
@@ -78,6 +83,12 @@ a v [registru MCP](https://registry.modelcontextprotocol.io) jako
 ```
 
 Claude Code: `claude mcp add stalwart-mail --env STALWART_URL=https://mail.example.com --env STALWART_USER=jana@example.com --env STALWART_PASSWORD=… -- npx -y stalwart-mail-mcp`
+
+### Claude na webu, v desktopovém chatu a v telefonu
+
+Pusť server vedle Stalwartu (`stalwart-mail-mcp --http`, nebo obraz pro Docker) a přidej jeho
+adresu jako vlastní konektor — krok za krokem v
+[docs/vzdaleny-server.md](docs/vzdaleny-server.md).
 
 ## Nastavení
 

@@ -1,0 +1,18 @@
+# Stalwart Mail MCP in remote mode, next to Stalwart behind the same reverse proxy.
+# The proxy must send two paths of your mail host here:
+#   /mcp   and   /.well-known/oauth-protected-resource
+# See docs/remote.md for the Stalwart OAuth client and the Claude side.
+services:
+  mail-mcp:
+    build: .                      # or: image you built with `docker build -t stalwart-mail-mcp .`
+    restart: unless-stopped
+    environment:
+      STALWART_URL: https://mail.example.com      # where JMAP and the OAuth sign-in live
+      MCP_PUBLIC_URL: https://mail.example.com    # the origin people reach this server under
+      MAIL_LANG: en
+      # MAIL_ALLOW_SEND: "false"                  # drafts only
+      # MAIL_OCR_PROVIDER: ollama                 # scans read by a model on your own machine
+      # MAIL_OCR_BASE_URL: http://ollama:11434/v1
+      # MAIL_OCR_MODEL: llama3.2-vision
+    ports:
+      - "127.0.0.1:8787:8787"     # only the reverse proxy needs to reach it

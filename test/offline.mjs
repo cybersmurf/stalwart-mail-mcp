@@ -10,6 +10,9 @@ import os from "node:os";
 import path from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { spawn } from "node:child_process";
+import net from "node:net";
 
 const fixture = (name) => new URL(`./fixtures/${name}`, import.meta.url).pathname;
 const BIG_IMAGE = "/System/Library/Desktop Pictures/iMac Blue.heic"; // macOS only; elsewhere the downscale test is skipped
@@ -66,8 +69,13 @@ const mock = http.createServer(async (req, res) => {
     res.writeHead(200, { "Content-Type": "text/event-stream" });
     return res.end(events.map(([name, data]) => `event: ${name}\ndata: ${JSON.stringify(data)}\n\n`).join(""));
   }
+  if (req.url === "/.well-known/oauth-authorization-server") return json({ issuer: base, token_endpoint: `${base}/auth/token` });
   if (req.url === "/.well-known/jmap") {
+    // like Stalwart: a rejected token is 401, no credentials at all is an anonymous session without accounts
+    if (req.headers.authorization === "Bearer bad-token") { res.writeHead(401); return res.end(); }
+    if (req.headers.authorization === "Bearer anonymous") return json({ apiUrl: `${base}/jmap`, accounts: {}, primaryAccounts: {} });
     return json({
+      username: "petr@example.com",
       apiUrl: `${base}/jmap`, uploadUrl: `${base}/upload/{accountId}`,
       downloadUrl: `${base}/download/{accountId}/{blobId}/{name}?accept={type}`,
       accounts: { acc: { name: "petr@example.com", isPersonal: true, accountCapabilities: { "urn:ietf:params:jmap:mail": {} } } },
@@ -79,6 +87,8 @@ const mock = http.createServer(async (req, res) => {
     for await (const chunk of req) body += chunk;
     authSeen.add(req.headers.authorization);
     const [method, args, tag] = JSON.parse(body).methodCalls[0];
+    if (method === "Identity/get") return json({ methodResponses: [["Identity/get", { list: [{ id: "i1", name: "Petr", email: "petr@example.com" }] }, tag]] });
+    if (method === "AddressBook/get") return json({ methodResponses: [["AddressBook/get", { list: [] }, tag]] });
     if (method === "Mailbox/get") {
       return json({ methodResponses: [["Mailbox/get", { list: [{ id: "in", name: "Inbox", role: "inbox", totalEmails: 1, unreadEmails: 0, parentId: null }] }, tag]] });
     }
@@ -116,6 +126,71 @@ const noOcr = await connect({ MAIL_OCR_BASE_URL: mockUrl, MISTRAL_API_KEY: "${us
 const call = (args, c = client) => c.callTool({ name: "mail_get_attachment", arguments: { id: "m1", ...args } });
 const texts = (r) => r.content.filter((c) => c.type === "text").map((c) => c.text).join("\n");
 const images = (r) => r.content.filter((c) => c.type === "image");
+
+// ---- remote mode: MCP over HTTP, the user's OAuth token passed on to JMAP ----
+async function remoteMode() {
+  const port = await new Promise((resolve) => { const s = net.createServer(); s.listen(0, "127.0.0.1", () => { const p = s.address().port; s.close(() => resolve(p)); }); });
+  const child = spawn("node", ["dist/index.cjs", "--http"], {
+    stdio: ["ignore", "ignore", "pipe"],
+    env: { PATH: process.env.PATH, HOME: process.env.HOME, STALWART_URL: mockUrl, MCP_PUBLIC_URL: "https://mail.example.com", MCP_HTTP_PORT: String(port), MCP_HTTP_HOST: "127.0.0.1", MAIL_LANG: "en", MAIL_DOWNLOAD_DIR: path.join(saveDir, "remote-must-stay-empty") },
+  });
+  let log = ""; child.stderr.on("data", (d) => (log += d));
+  const base = `http://127.0.0.1:${port}`;
+  try {
+    for (let i = 0; i < 50; i++) { if (await fetch(`${base}/health`).then((r) => r.ok, () => false)) break; await new Promise((r) => setTimeout(r, 100)); }
+    assert.deepEqual(await (await fetch(`${base}/health`)).json().then((j) => j.status), "ok", log);
+
+    // where to sign in (RFC 9728), both at the root and at the path-specific location
+    for (const where of ["/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/mcp"]) {
+      const meta = await (await fetch(base + where)).json();
+      assert.equal(meta.resource, "https://mail.example.com/mcp");
+      assert.deepEqual(meta.authorization_servers, [mockUrl]);
+      assert.ok(meta.scopes_supported.includes("urn:ietf:params:oauth:scope:mail"));
+    }
+    assert.equal((await (await fetch(`${base}/.well-known/oauth-authorization-server`)).json()).issuer, mockUrl);
+
+    // no token, a rejected token and an anonymous session all end in 401 with the pointer to the metadata
+    const init = { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "t", version: "0" } } };
+    const post = (headers) => fetch(`${base}/mcp`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream", ...headers }, body: JSON.stringify(init) });
+    let r = await post({});
+    assert.equal(r.status, 401);
+    assert.match(r.headers.get("www-authenticate"), /^Bearer resource_metadata="https:\/\/mail\.example\.com\/\.well-known\/oauth-protected-resource"/);
+    for (const token of ["bad-token", "anonymous"]) {
+      r = await post({ Authorization: `Bearer ${token}` });
+      assert.equal(r.status, 401, token);
+      assert.match(r.headers.get("www-authenticate"), /error="invalid_token"/);
+    }
+    assert.equal((await fetch(`${base}/mcp`)).status, 405);
+    assert.equal((await fetch(`${base}/nothing`)).status, 404);
+
+    // a signed-in user: the token goes on to JMAP as it came
+    const c = new Client({ name: "remote", version: "0" });
+    await c.connect(new StreamableHTTPClientTransport(new URL(`${base}/mcp`), { requestInit: { headers: { Authorization: "Bearer good-token" } } }));
+    try {
+      const tools = (await c.listTools()).tools;
+      assert.equal(tools.length, 10);
+      // files on the server are not the user's files: no attachments from disk, nothing saved
+      assert.ok(!("attachments" in tools.find((x) => x.name === "mail_send_email").inputSchema.properties));
+      assert.ok(!("attachments" in tools.find((x) => x.name === "mail_create_draft").inputSchema.properties));
+      const att = tools.find((x) => x.name === "mail_get_attachment");
+      assert.equal(att.annotations.readOnlyHint, true);
+      assert.ok(!("save_dir" in att.inputSchema.properties));
+
+      let out = texts(await c.callTool({ name: "mail_get_email", arguments: { id: "m1" } }));
+      assert.match(out, /\*\*From:\*\* Jane Agent <jane@example.com>/);
+      assert.ok(authSeen.has("Bearer good-token"), "the bearer token reaches JMAP");
+      out = texts(await c.callTool({ name: "mail_list_mailboxes", arguments: {} }).catch((e) => ({ content: [{ type: "text", text: String(e) }] })));
+      assert.match(out, /Signed in as \*\*petr@example\.com\*\*/, out);
+      out = texts(await c.callTool({ name: "mail_get_attachment", arguments: { id: "m1", attachment: "penb.pdf" } }));
+      assert.match(out, /Třída energetické náročnosti: G/);
+      assert.match(out, /not kept on disk/);
+      await assert.rejects(fs.access(path.join(saveDir, "remote-must-stay-empty")));
+    } finally { await c.close(); }
+    console.log("remote mode (metadata, 401 challenges, token pass-through, no local files): OK");
+  } finally {
+    child.kill();
+  }
+}
 
 // ---- OCR providers: OpenAI-compatible (local and hosted), Anthropic, incomplete settings ----
 async function ocrProviders() {
@@ -385,6 +460,7 @@ try {
     }
   }
 
+  await remoteMode();
   await ocrProviders();
   await capabilities();
   await languagesAndBranding();

@@ -39,14 +39,20 @@ export const USING = {
 export class JmapClient {
   private session: JmapSession | null = null;
   private readonly auth: string;
+  private sessionUser = "";
 
   constructor(
     readonly baseUrl: string,
-    readonly user: string,
+    private readonly configuredUser: string,
     password: string,
     token = "",
   ) {
-    this.auth = token ? `Bearer ${token}` : "Basic " + Buffer.from(`${user}:${password}`, "utf8").toString("base64");
+    this.auth = token ? `Bearer ${token}` : "Basic " + Buffer.from(`${configuredUser}:${password}`, "utf8").toString("base64");
+  }
+
+  /** The signed-in address: configured for password sign-in, taken from the session for a token. */
+  get user(): string {
+    return this.configuredUser || this.sessionUser;
   }
 
   private async http(url: string, init: RequestInit): Promise<Response> {
@@ -81,7 +87,9 @@ export class JmapClient {
       capabilities: Object.keys(a.accountCapabilities ?? {}),
     }));
     const primaryMail: string = s.primaryAccounts?.[USING.mail] ?? accounts.find((a) => a.isPersonal)?.id ?? accounts[0]?.id;
-    if (!primaryMail) throw new JmapError(t("err.noMailAccount"));
+    // without valid credentials Stalwart answers with an anonymous session that has no accounts
+    if (!primaryMail) throw new JmapError(t("err.noMailAccount"), 401);
+    this.sessionUser = typeof s.username === "string" ? s.username : accounts.find((a) => a.id === primaryMail)?.name ?? "";
     this.session = { apiUrl: s.apiUrl, uploadUrl: s.uploadUrl, downloadUrl: s.downloadUrl, accounts, primaryMail };
     return this.session;
   }
